@@ -133,6 +133,24 @@ def init_schema():
         )
     """)
 
+    # New: Tags
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # New: Q&A Entry Tags (many-to-many)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS qa_entry_tags (
+            qa_entry_id INTEGER REFERENCES qa_entries(id) ON DELETE CASCADE,
+            tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+            PRIMARY KEY (qa_entry_id, tag_id)
+        )
+    """)
+
     conn.commit()
     conn.close()
     print("Schema initialized.")

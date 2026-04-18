@@ -28,48 +28,37 @@
           </svg>
           Learning DB
         </div>
-        <button class="new-chat-btn" id="newChatBtn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          New Chat
-        </button>
+      </div>
+
+      <!-- Knowledge Stats -->
+      <div class="sidebar-section sidebar-section-sm">
+        <div class="sidebar-section-title">You Have Learned</div>
+        <div class="knowledge-stats" id="knowledgeStats">
+          <!-- Stats loaded dynamically -->
+        </div>
+      </div>
+
+      <!-- History Section -->
+      <div class="sidebar-section sidebar-section-fill" style="display: flex; flex-direction: column;">
+        <div class="sidebar-section-title">History</div>
+        <div class="history-list" id="historyList">
+          <!-- Sessions grouped by date -->
+        </div>
       </div>
 
       <!-- Topics Section -->
-      <div class="sidebar-section">
+      <div class="sidebar-section sidebar-section-sm">
         <div class="sidebar-section-title">Topics</div>
         <div class="topics-list" id="topicsList">
           <!-- Topics loaded dynamically -->
         </div>
       </div>
 
-      <!-- Knowledge Stats -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">Your Knowledge</div>
-        <div class="knowledge-stats" id="knowledgeStats">
-          <!-- Stats loaded dynamically -->
-        </div>
-      </div>
-
-      <!-- Weekly Digest -->
-      <a href="#" class="digest-link" id="digestLink">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10 9 9 9 8 9"></polyline>
-        </svg>
-        Weekly Digest
-      </a>
-
-      <!-- History Section -->
-      <div class="sidebar-section" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
-        <div class="sidebar-section-title">History</div>
-        <div class="history-list" id="historyList">
-          <!-- Sessions grouped by date -->
+      <!-- Tags Section -->
+      <div class="sidebar-section sidebar-section-sm">
+        <div class="sidebar-section-title">Tags</div>
+        <div class="tags-list" id="tagsList">
+          <!-- Tags loaded dynamically -->
         </div>
       </div>
     </aside>
@@ -78,7 +67,15 @@
     <main class="main-content">
       <!-- Chat Header -->
       <header class="chat-header">
-        <div class="chat-title">New Chat</div>
+        <div class="header-left">
+          <button class="new-chat-btn-header" id="newChatBtn" title="Start new chat">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>New Chat</span>
+          </button>
+        </div>
         <div class="header-controls">
           <button class="theme-toggle" id="themeToggle" title="Toggle theme">
             <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -269,13 +266,23 @@
           content: content,
           timestamp: new Date().toISOString()
         });
-
-        // Auto-generate title from first user message
-        if (!session.title && role === 'user') {
-          session.title = content.substring(0, 50) + (content.length > 50 ? '...' : '');
-        }
         saveSessions();
       }
+    }
+
+    // Extract first sentence for session title
+    function extractTitleFromText(text) {
+      if (!text) return null;
+      // Find first sentence ending with . ! or ?
+      const match = text.match(/^[^.!?]*[.!?]/);
+      if (match && match[0].length > 10) {
+        return match[0].trim().substring(0, 60);
+      }
+      // Fallback: first 50 chars
+      if (text.length > 10) {
+        return text.trim().substring(0, 50) + (text.length > 50 ? '...' : '');
+      }
+      return null;
     }
 
     // Configure marked for synchronous rendering
@@ -295,7 +302,6 @@
     const modelSelect = document.getElementById('modelSelect');
     const topicsList = document.getElementById('topicsList');
     const knowledgeStats = document.getElementById('knowledgeStats');
-    const digestLink = document.getElementById('digestLink');
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
     const emptyState = document.getElementById('emptyState');
@@ -307,6 +313,7 @@
       loadTopics();
       loadKnowledgeStats();
       loadHistory();
+      loadTags();
       messageInput.focus();
 
       // Mode option click handlers
@@ -445,11 +452,6 @@
       updateSearchModeIcon();
     });
 
-    digestLink.addEventListener('click', async (e) => {
-      e.preventDefault();
-      alert('Weekly digest feature - coming soon!');
-    });
-
     sidebarToggle.addEventListener('click', () => {
       sidebar.classList.toggle('open');
     });
@@ -495,6 +497,7 @@
       isStreaming = true;
       sendBtn.disabled = true;
       abortController = new AbortController();
+      let sessionTitleSet = false;
 
       try {
         let endpoint = '/chat';
@@ -553,6 +556,20 @@
                   assistantMessage += data.token;
                   bubbleDiv.innerHTML = marked.parse(assistantMessage);
                   scrollToBottom();
+
+                  // Auto-generate title from first assistant sentence (once message is substantial)
+                  if (!sessionTitleSet && assistantMessage.length > 50) {
+                    const title = extractTitleFromText(assistantMessage);
+                    if (title) {
+                      loadSessions();
+                      const session = sessions.find(s => s.id === currentSessionId);
+                      if (session && !session.title) {
+                        session.title = title;
+                        saveSessions();
+                        sessionTitleSet = true;
+                      }
+                    }
+                  }
                 }
                 if (data.tool) {
                   // Filter out redundant/useless status messages for web/single mode
@@ -600,6 +617,7 @@
         // Save assistant message to session
         if (assistantMessage) {
           saveMessageToSession('assistant', assistantMessage);
+          renderHistory();
         }
 
         // Add logged badge if applicable
@@ -611,8 +629,10 @@
             badge.textContent = 'Logged';
             metaDiv.appendChild(badge);
           }
-          // Refresh knowledge stats
+          // Refresh knowledge stats, topics, and tags
           loadKnowledgeStats();
+          loadTopics();
+          loadTags();
         }
 
       } catch (error) {
@@ -866,7 +886,7 @@
     // ─── Load Knowledge Stats ───────────────────────────────────────────────────
     async function loadKnowledgeStats() {
       try {
-        const response = await fetch('/api/knowledge');
+        const response = await fetch('/api/stats/today');
         const data = await response.json();
         renderKnowledgeStats(data);
       } catch (error) {
@@ -875,29 +895,51 @@
     }
 
     function renderKnowledgeStats(data) {
-      const total = data.total_topics || 0;
-      const proficiencyLevels = data.proficiency_levels || { 1: 0, 2: 0, 3: 0, 4: 0 };
-
-      // Calculate progress percentage (assuming level 4 is "mastered")
-      const mastered = proficiencyLevels[4] || 0;
-      const inProgress = proficiencyLevels[3] || 0;
-      const progress = total > 0 ? Math.round(((mastered + inProgress * 0.5) / total) * 100) : 0;
-
+      const count = data.count || 0;
+      const label = count === 1 ? 'new concept' : 'new concepts';
       knowledgeStats.innerHTML = `
-        <div class="stat-row">
-          <span class="stat-label">Topics learned</span>
-          <span class="stat-value">${total}</span>
-        </div>
-        <div class="progress-container">
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: ${progress}%"></div>
-          </div>
-          <div class="progress-label">
-            <span>Beginner</span>
-            <span>${progress}% proficiency</span>
-          </div>
+        <div class="knowledge-today">
+          <span class="knowledge-count">${count}</span>
+          <span class="knowledge-label">${label} today</span>
         </div>
       `;
+    }
+
+    // ─── Load Tags ────────────────────────────────────────────────────────────────
+    async function loadTags() {
+      try {
+        const response = await fetch('/api/tags');
+        const data = await response.json();
+        renderTags(data.tags || []);
+      } catch (error) {
+        console.error('Error loading tags:', error);
+      }
+    }
+
+    function renderTags(tags) {
+      const tagsList = document.getElementById('tagsList');
+      if (tags.length === 0) {
+        tagsList.innerHTML = '<div class="tag-empty">No tags yet</div>';
+        return;
+      }
+
+      // Show top 15 tags
+      const displayTags = tags.slice(0, 15);
+      tagsList.innerHTML = displayTags.map(tag => `
+        <div class="tag-item" data-tag="${escapeHtml(tag.name)}">
+          <span class="tag-name">${escapeHtml(tag.name)}</span>
+          <span class="tag-count">${tag.entry_count}</span>
+        </div>
+      `).join('');
+
+      // Attach click handlers
+      tagsList.querySelectorAll('.tag-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const tagName = el.dataset.tag;
+          messageInput.value = `tag:${tagName}`;
+          messageInput.focus();
+        });
+      });
     }
 
     // ─── API: Recent Entries ─────────────────────────────────────────────────────
@@ -947,19 +989,70 @@
         return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       };
 
+      // Count rounds (Q+A pairs) - user msg + assistant msg = 1 round
+      const countRounds = (messages) => {
+        // Count only user messages (each represents a round of Q&A)
+        const userMsgs = messages.filter(m => m.role === 'user').length;
+        return userMsgs;
+      };
+
+      const formatRounds = (count) => {
+        return count === 1 ? '1 round' : `${count} rounds`;
+      };
+
+      // Format time ago
+      const formatTimeAgo = (isoString) => {
+        const date = new Date(isoString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays}d ago`;
+      };
+
       let html = '';
+      let totalShown = 0;
+      const DEFAULT_SHOW = 5;
+      const EXPANDED_SHOW = 15;
+      let isExpanded = false;
+
       Object.entries(grouped).forEach(([date, daySessions]) => {
         html += `<div class="history-group">
           <div class="history-date">${formatDate(date)}</div>`;
         daySessions.forEach(session => {
           const isActive = session.id === currentSessionId;
-          html += `<div class="history-item ${isActive ? 'active' : ''}" data-session-id="${session.id}">
-            <div class="history-title">${escapeHtml(session.title || 'New Chat')}</div>
-            <div class="history-meta">${session.messages.length} messages</div>
-          </div>`;
+          const rounds = countRounds(session.messages);
+          const roundsLabel = formatRounds(rounds);
+          const timeAgo = formatTimeAgo(session.created_at);
+
+          if (totalShown < DEFAULT_SHOW || isExpanded) {
+            html += `<div class="history-item ${isActive ? 'active' : ''}" data-session-id="${session.id}">
+              <div class="history-title">${escapeHtml(session.title || 'New Chat')}</div>
+              <div class="history-meta">${timeAgo} · ${roundsLabel}</div>
+            </div>`;
+          } else {
+            html += `<div class="history-item history-item-hidden ${isActive ? 'active' : ''}" data-session-id="${session.id}" style="display: none;">
+              <div class="history-title">${escapeHtml(session.title || 'New Chat')}</div>
+              <div class="history-meta">${timeAgo} · ${roundsLabel}</div>
+            </div>`;
+          }
+          totalShown++;
         });
         html += '</div>';
       });
+
+      // Add expand/collapse toggle if there are more than DEFAULT_SHOW
+      const totalSessions = sessions.length;
+      if (totalSessions > DEFAULT_SHOW) {
+        html += `<div class="history-expand" id="historyExpand">
+          <span class="history-expand-text">Show ${Math.min(totalSessions, EXPANDED_SHOW) - DEFAULT_SHOW} more</span>
+        </div>`;
+      }
 
       historyList.innerHTML = html;
 
@@ -967,6 +1060,31 @@
       historyList.querySelectorAll('.history-item').forEach(el => {
         el.addEventListener('click', handleHistoryItemClick);
       });
+
+      // Attach expand toggle handler
+      const expandEl = document.getElementById('historyExpand');
+      if (expandEl) {
+        expandEl.addEventListener('click', () => {
+          isExpanded = !isExpanded;
+          const hiddenItems = historyList.querySelectorAll('.history-item-hidden');
+          hiddenItems.forEach((item, idx) => {
+            if (isExpanded && idx < EXPANDED_SHOW - DEFAULT_SHOW) {
+              item.style.display = '';
+            } else {
+              item.style.display = 'none';
+            }
+          });
+          const expandText = document.querySelector('.history-expand-text');
+          if (expandText) {
+            if (isExpanded) {
+              expandText.textContent = 'Show less';
+            } else {
+              const remaining = totalSessions - DEFAULT_SHOW;
+              expandText.textContent = `Show ${remaining} more`;
+            }
+          }
+        });
+      }
     }
 
     function handleHistoryItemClick(e) {

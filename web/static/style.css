@@ -75,7 +75,8 @@ html, body {
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar-header {
@@ -133,6 +134,16 @@ html, body {
 .sidebar-section {
   padding: 16px;
   border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.sidebar-section-sm {
+  flex-shrink: 0;
+}
+
+.sidebar-section-fill {
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-section-title {
@@ -197,6 +208,23 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.knowledge-today {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.knowledge-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.knowledge-label {
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .stat-row {
@@ -290,6 +318,30 @@ html, body {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.new-chat-btn-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.new-chat-btn-header:hover {
+  opacity: 0.9;
 }
 
 .model-selector {
@@ -793,7 +845,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
@@ -848,6 +900,57 @@ html, body {
   color: var(--text-muted);
   text-align: center;
   padding: 8px;
+}
+
+/* ─── Tags List ──────────────────────────────────────────────────────────────── */
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.tag-item:hover {
+  background: var(--border-subtle);
+}
+
+.tag-name {
+  color: var(--text-primary);
+}
+
+.tag-count {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.tag-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.history-expand {
+  font-size: 11px;
+  color: var(--text-accent);
+  text-align: center;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.history-expand:hover {
+  text-decoration: underline;
 }
 
 /* ─── Header Controls ────────────────────────────────────────────────────────── */

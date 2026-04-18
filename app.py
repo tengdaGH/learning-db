@@ -19,7 +19,10 @@ from db.queries import (
     get_or_create_topic,
     update_user_knowledge,
     get_qa_entries_by_topic_id,
+    get_new_entries_today,
+    set_tags_for_entry,
 )
+from agents.tag_manager import tag_entry
 from services.auto_log import should_log, estimate_confidence
 from services.topic_detector import extract_primary_topic, extract_tags
 
@@ -322,7 +325,7 @@ CONVERSATION STYLE:
                 sources = ",".join([r.get("url", "") for r in web_results]) if web_results else ""
                 topic_id = get_or_create_topic(topic_name)
 
-                add_qa_entry(
+                entry_id = add_qa_entry(
                     question=message,
                     answer=full_response,
                     topic_name=topic_name,
@@ -331,6 +334,8 @@ CONVERSATION STYLE:
                     confidence_level=confidence,
                     sources=sources,
                 )
+                # Auto-tag the entry
+                tag_entry(entry_id, message, full_response)
                 update_user_knowledge(topic_name, proficiency=min(confidence, 4))
                 was_logged = True
             except Exception as e:
@@ -495,7 +500,7 @@ CONVERSATION STYLE:
                 tags = extract_tags(message, full_response)
                 topic_id = get_or_create_topic(topic_name)
 
-                add_qa_entry(
+                entry_id = add_qa_entry(
                     question=message,
                     answer=full_response,
                     topic_name=topic_name,
@@ -504,6 +509,8 @@ CONVERSATION STYLE:
                     confidence_level=confidence,
                     sources=",".join(sources),
                 )
+                # Auto-tag the entry
+                tag_entry(entry_id, message, full_response)
                 update_user_knowledge(topic_name, proficiency=min(confidence, 4))
                 was_logged = True
             except Exception as e:
@@ -562,12 +569,35 @@ def api_recent():
     return {"entries": entries}
 
 
+@app.route("/api/stats/today", methods=["GET"])
+def api_stats_today():
+    """Return count of new entries learned today."""
+    count = get_new_entries_today()
+    return {"count": count}
+
+
 @app.route("/api/review", methods=["POST"])
 def api_review():
     """Trigger review agent, return digest."""
     from agents.review_agent import run_review
     digest = run_review()
     return {"digest": digest}
+
+
+@app.route("/api/tags", methods=["GET"])
+def api_tags():
+    """Return all tags with entry counts."""
+    from db.queries import get_all_tags
+    tags = get_all_tags()
+    return {"tags": tags}
+
+
+@app.route("/api/tags/cleanup", methods=["POST"])
+def api_tags_cleanup():
+    """Run tag maintenance: remove orphans and merge similar tags."""
+    from agents.tag_manager import cleanup_tags
+    report = cleanup_tags()
+    return {"report": report}
 
 
 if __name__ == "__main__":

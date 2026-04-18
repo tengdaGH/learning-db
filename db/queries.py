@@ -37,7 +37,7 @@ def get_all_topics_with_counts():
         FROM topics t
         LEFT JOIN qa_entries q ON t.id = q.topic_id
         GROUP BY t.id
-        ORDER BY t.name
+        ORDER BY qa_count DESC, t.name
     """)
     rows = cur.fetchall()
     conn.close()
@@ -287,3 +287,139 @@ def get_knowledge_graph():
     rows = cur.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def get_new_entries_today():
+    """Return count of Q&A entries created today."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT COUNT(*) as count FROM qa_entries
+        WHERE DATE(created_at) = DATE('now')
+    """)
+    row = cur.fetchone()
+    conn.close()
+    return row["count"] if row else 0
+
+# ─── Tags ───────────────────────────────────────────────────────────────────────
+
+def get_or_create_tag(name: str) -> int:
+    """Get existing tag id or create new one."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM tags WHERE name = ?", (name.lower(),))
+    row = cur.fetchone()
+    if row:
+        conn.close()
+        return row["id"]
+    cur.execute("INSERT INTO tags (name) VALUES (?)", (name.lower(),))
+    conn.commit()
+    tag_id = cur.lastrowid
+    conn.close()
+    return tag_id
+
+def get_all_tags():
+    """Return all tags with entry counts."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT t.id, t.name, COUNT(qet.qa_entry_id) as entry_count
+        FROM tags t
+        LEFT JOIN qa_entry_tags qet ON t.id = qet.tag_id
+        GROUP BY t.id
+        ORDER BY entry_count DESC, t.name
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_tags_for_entry(qa_entry_id: int):
+    """Get all tags for a specific Q&A entry."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT t.id, t.name FROM tags t
+        JOIN qa_entry_tags qet ON t.id = qet.tag_id
+        WHERE qet.qa_entry_id = ?
+    """, (qa_entry_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def set_tags_for_entry(qa_entry_id: int, tag_names: list):
+    """Replace all tags for a Q&A entry with new set."""
+    conn = get_connection()
+    cur = conn.cursor()
+    # Remove existing tags
+    cur.execute("DELETE FROM qa_entry_tags WHERE qa_entry_id = ?", (qa_entry_id,))
+    # Add new tags
+    for name in tag_names:
+        if name and len(name) > 1:
+            tag_id = get_or_create_tag(name.strip())
+            cur.execute(
+                "INSERT OR IGNORE INTO qa_entry_tags (qa_entry_id, tag_id) VALUES (?, ?)",
+                (qa_entry_id, tag_id)
+            )
+    conn.commit()
+    conn.close()
+
+def get_entries_by_tag(tag_name: str):
+    """Get all Q&A entries with a specific tag."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT q.* FROM qa_entries q
+        JOIN qa_entry_tags qet ON q.id = qet.qa_entry_id
+        JOIN tags t ON qet.tag_id = t.id
+        WHERE t.name = ?
+        ORDER BY q.created_at DESC
+    """, (tag_name.lower(),))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def delete_unused_tags():
+    """Remove tags with no associated entries."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        DELETE FROM tags WHERE id NOT IN (
+            SELECT DISTINCT tag_id FROM qa_entry_tags
+        )
+    """)
+    deleted = cur.rowcount
+    conn.commit()
+    conn.close()
+    return deleted
+
+def find_similar_tags():
+    """Find tags that might be duplicates (similar names)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name FROM tags ORDER BY name")
+    tags = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    similar = []
+    for i, t1 in enumerate(tags):
+        for t2 in tags[i+1:]:
+            # Check if one is prefix/suffix of other or very similar
+            n1, n2 = t1["name"], t2["name"]
+            if n1.startswith(n2[:4]) or n2.startswith(n1[:4]):
+                similar.append((t1, t2))
+    return similar
+
+def merge_tags(source_tag_id: int, target_tag_id: int):
+    """Move all entries from source tag to target tag, then delete source."""
+    conn = get_connection()
+    cur = conn.cursor()
+    # Update entry tags to use target
+    cur.execute("""
+        UPDATE qa_entry_tags SET tag_id = ?
+        WHERE tag_id = ? AND qa_entry_id IN (
+            SELECT qa_entry_id FROM qa_entry_tags WHERE tag_id = ?
+        )
+    """, (target_tag_id, source_tag_id, source_tag_id))
+    # Delete source tag
+    cur.execute("DELETE FROM tags WHERE id = ?", (source_tag_id,))
+    conn.commit()
+    conn.close()
