@@ -489,14 +489,7 @@
       // Show typing indicator
       const typingId = showTypingIndicator();
 
-      // Show tool log for web/deep modes
-      const toolLog = document.getElementById('toolLog');
-      const toolLogContent = document.getElementById('toolLogContent');
-      toolLogContent.innerHTML = '';
       const mode = SEARCH_MODES[currentSearchMode];
-      if (mode.id !== 'llm') {
-        toolLog.classList.add('visible');
-      }
 
       // Start streaming response
       isStreaming = true;
@@ -524,10 +517,22 @@
         let assistantMessage = '';
         let wasLogged = false;
 
-        // Create assistant message bubble
+        // Replace typing indicator with actual message bubble
+        removeTypingIndicator(typingId);
         const assistantDiv = createMessageElement('assistant', '');
         messagesContainer.appendChild(assistantDiv);
         const bubbleDiv = assistantDiv.querySelector('.message-bubble');
+
+        // For deep mode, show a default activity message
+        if (mode.id === 'deep') {
+          const activityDiv = assistantDiv.querySelector('.message-activity');
+          if (activityDiv) {
+            const entry = document.createElement('div');
+            entry.className = 'activity-entry activity-deep';
+            entry.textContent = 'Conducting deep research...';
+            activityDiv.appendChild(entry);
+          }
+        }
 
         while (true) {
           const { done, value } = await reader.read();
@@ -550,7 +555,25 @@
                   scrollToBottom();
                 }
                 if (data.tool) {
-                  addToolEntry(data.tool);
+                  // Filter out redundant/useless status messages for web/single mode
+                  const msg = data.tool.message || '';
+                  if (msg === 'Searching the web for relevant information...' ||
+                      msg.startsWith('Found ') ||
+                      msg === 'Generating answer with web context...' ||
+                      msg === 'Answer complete' ||
+                      data.tool.type === 'complete') {
+                    // Skip these
+                  } else {
+                    // Show activity inline in bubble
+                    const activityDiv = assistantDiv.querySelector('.message-activity');
+                    if (activityDiv) {
+                      const entry = document.createElement('div');
+                      entry.className = `activity-entry activity-${data.tool.type}`;
+                      entry.textContent = data.tool.message;
+                      activityDiv.appendChild(entry);
+                      scrollToBottom();
+                    }
+                  }
                 }
                 if (data.model) {
                   currentModel = data.model;
@@ -567,7 +590,12 @@
 
         // Remove typing indicator
         removeTypingIndicator(typingId);
-        toolLog.classList.remove('visible');
+
+        // Remove empty activity container
+        const activityDiv = assistantDiv.querySelector('.message-activity');
+        if (activityDiv && activityDiv.children.length === 0) {
+          activityDiv.remove();
+        }
 
         // Save assistant message to session
         if (assistantMessage) {
@@ -635,8 +663,10 @@
       const bubbleContent = role === 'assistant'
         ? marked.parse(content)
         : escapeHtml(content);
+      const activityHtml = role === 'assistant' ? '<div class="message-activity"></div>' : '';
       div.innerHTML = `
         <div class="message-bubble">${bubbleContent}</div>
+        ${activityHtml}
         <div class="message-meta"></div>
       `;
       return div;
@@ -699,6 +729,7 @@
       let indicatorText = '';
       if (mode.id === 'single') indicatorText = 'Searching the web...';
       else if (mode.id === 'deep') indicatorText = 'Conducting deep research...';
+      const thinkingStepsHtml = mode.id === 'deep' ? '<div class="thinking-steps"></div>' : '';
       div.innerHTML = `
         <div class="typing-indicator">
           <div class="typing-dot"></div>
@@ -706,6 +737,7 @@
           <div class="typing-dot"></div>
         </div>
         ${indicatorText ? `<div class="typing-text">${indicatorText}</div>` : ''}
+        ${thinkingStepsHtml}
       `;
       messagesContainer.appendChild(div);
       scrollToBottom();

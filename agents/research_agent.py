@@ -126,7 +126,7 @@ class ResearchAgent:
         # Generate answer via MiniMax, enriched with web context if available
         answer = self._generate_answer(question, web_results)
         confidence = estimate_confidence(answer)
-        topic_name = extract_primary_topic(question, answer)
+        topic_name, _ = extract_primary_topic(question, answer, self.user_topics)
         tags = extract_tags(question, answer)
         sources = self._extract_sources_from_web(web_results)
         topic_id = get_or_create_topic(topic_name)

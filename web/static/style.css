@@ -1062,6 +1062,84 @@ html, body {
   white-space: nowrap;
 }
 
+/* ─── Inline Thinking Steps (Deep Search) ─────────────────────────────────── */
+.thinking-steps {
+  margin-top: 8px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.thinking-step {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 2px 0;
+  opacity: 0.8;
+}
+
+.thinking-step::before {
+  content: "→ ";
+  opacity: 0.5;
+}
+
+/* ─── Markdown Tables ─────────────────────────────────────────────────────── */
+.message-bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.message-bubble th,
+.message-bubble td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.message-bubble th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+
+.message-bubble tr:nth-child(even) td {
+  background: rgba(128, 128, 128, 0.05);
+}
+
+/* ─── Inline Activity Entries ─────────────────────────────────────────────── */
+.message-activity {
+  margin-top: 8px;
+  padding-left: 0;
+  list-style: none;
+  opacity: 0.8;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.activity-entry {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 2px 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.activity-entry::before {
+  content: "→ ";
+  opacity: 0.5;
+}
+
+.activity-search { color: var(--accent); }
+.activity-search::before { content: "🔍 "; opacity: 1; }
+
+.activity-thinking { color: var(--text-muted); }
+.activity-agent { color: var(--text-muted); }
+.activity-synthesize { color: var(--accent); }
+.activity-complete { color: #22c55e; }
+.activity-complete::before { content: "✓ "; opacity: 1; }
+.activity-deep { color: var(--text-muted); font-style: italic; }
+.activity-deep::before { content: "🧠 "; opacity: 1; }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }

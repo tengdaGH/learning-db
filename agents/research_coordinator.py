@@ -107,7 +107,7 @@ class ResearchCoordinator:
         was_logged = False
         if log and synthesis:
             confidence = estimate_confidence(synthesis)
-            topic_name = extract_primary_topic(question, synthesis)
+            topic_name, _ = extract_primary_topic(question, synthesis, self.user_topics)
             tags = extract_tags(question, synthesis)
             topic_id = get_or_create_topic(topic_name)
 
@@ -155,7 +155,7 @@ class ResearchCoordinator:
         if log and synthesis:
             try:
                 confidence = estimate_confidence(synthesis)
-                topic_name = extract_primary_topic(question, synthesis)
+                topic_name, _ = extract_primary_topic(question, synthesis, self.user_topics)
                 tags = extract_tags(question, synthesis)
                 topic_id = get_or_create_topic(topic_name)
 

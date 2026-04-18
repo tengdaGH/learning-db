@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Personal Learning Database — an AI-powered learning assistant that logs Q&A pairs to SQLite, tracks knowledge/proficiency per topic, detects stale content, and generates weekly learning digests. Built with Flask (web UI) and a CLI interface.
 
+**Topic System**: Topics are dynamically determined by the LLM at query time — no hard-coded topic list. Each question is analyzed and either clustered under an existing topic or creates a new one. Topic detection is per-query, supporting mid-session topic branching.
+
 ## Commands
 
 ```bash

@@ -8,7 +8,7 @@ import json
 from flask import Flask, render_template, request, Response, stream_with_context
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 from db.queries import (
     get_all_topics,
@@ -22,6 +22,51 @@ from db.queries import (
 )
 from services.auto_log import should_log, estimate_confidence
 from services.topic_detector import extract_primary_topic, extract_tags
+
+
+def link_citations_in_markdown(text: str, sources: list) -> str:
+    """Convert [N] citation markers to proper markdown links using source URLs."""
+    if not sources:
+        return text
+
+    # Build citation number -> url mapping
+    citation_map = {}
+    for i, url in enumerate(sources, 1):
+        citation_map[str(i)] = url
+
+    def replace_citation(match):
+        num = match.group(1)
+        if num in citation_map:
+            url = citation_map[num]
+            return f'[{num}]({url})'
+        return match.group(0)
+
+    # Replace [N] citation markers in the body (not in URLs or the Sources header line)
+    # Only replace [N] that appear outside of URLs and outside of the Sources section definition
+    lines = text.split('\n')
+    in_sources_section = False
+    result_lines = []
+
+    for line in lines:
+        if re.match(r'^##?\s*Sources', line, re.IGNORECASE):
+            in_sources_section = True
+            result_lines.append(line)
+            continue
+
+        if in_sources_section:
+            # In Sources section, convert numbered list items to markdown links
+            # Format might be: [1] https://url or 1. https://url or - https://url
+            numbered_link = re.sub(r'\[(\d+)\]\s+(https?://\S+)', r'[\1](\2)', line)
+            result_lines.append(numbered_link)
+        else:
+            # Outside Sources section, replace [N] with [N](url) if we have that citation
+            # Be careful not to replace [N] inside URLs or already-linked markdown
+            # Replace [N] followed by whitespace or end of line (not part of a URL)
+            replaced = re.sub(r'\[(\d+)\](?=\s|$|(?=[^[]*\]))', replace_citation, line)
+            result_lines.append(replaced)
+
+    return '\n'.join(result_lines)
+
 
 app = Flask(__name__, static_folder="web/static", template_folder="web/templates")
 
@@ -99,9 +144,8 @@ def _call_minimax(prompt: str, system: str = "", max_tokens: int = 1024):
         try:
             response = client.messages.create(
                 model=MINIMAX_MODEL,
-                system=system,
                 max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 stream=True,
             )
             return response
@@ -122,13 +166,17 @@ def _call_claude(prompt: str, system: str = "", max_tokens: int = 1024):
         base_url=os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.io/v1"),
     )
 
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
     for attempt in range(3):
         try:
             response = client.messages.create(
                 model=CLAUDE_MODEL,
-                system=system,
                 max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 stream=True,
             )
             return response
@@ -269,7 +317,7 @@ CONVERSATION STYLE:
         if log and full_response:
             try:
                 confidence = estimate_confidence(full_response)
-                topic_name = extract_primary_topic(message, full_response)
+                topic_name, _ = extract_primary_topic(message, full_response, user_topics)
                 tags = extract_tags(message, full_response)
                 sources = ",".join([r.get("url", "") for r in web_results]) if web_results else ""
                 topic_id = get_or_create_topic(topic_name)
@@ -330,6 +378,9 @@ def chat_deep():
                     research_sources = data.get('sources', [])
                     full_response = data.get('answer', '')
                     was_logged = data.get('was_logged', False)
+
+                    # Link citations in markdown
+                    full_response = link_citations_in_markdown(full_response, research_sources)
 
                     # Stream the final answer with small chunks
                     chunk_size = 20
@@ -430,6 +481,9 @@ CONVERSATION STYLE:
         if web_results:
             sources = [r.get("url", "") for r in web_results if r.get("url")]
 
+        # Link citations in markdown
+        full_response = link_citations_in_markdown(full_response, sources)
+
         # Log if appropriate
         log, _ = should_log(message)
         was_logged = False
@@ -437,7 +491,7 @@ CONVERSATION STYLE:
         if log and full_response:
             try:
                 confidence = estimate_confidence(full_response)
-                topic_name = extract_primary_topic(message, full_response)
+                topic_name, _ = extract_primary_topic(message, full_response, user_topics)
                 tags = extract_tags(message, full_response)
                 topic_id = get_or_create_topic(topic_name)
 
