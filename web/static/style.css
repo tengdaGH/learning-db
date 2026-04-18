@@ -1,25 +1,25 @@
 /* ─── Variables ─────────────────────────────────────────────────────────────── */
 :root {
-  /* Zed-inspired dark theme (default) */
-  --bg-primary: #1d1d1f;
-  --bg-secondary: #252527;
-  --bg-sidebar: #1a1a1c;
-  --bg-hover: #2d2d30;
-  --bg-active: #333337;
-  --text-primary: #c5c5c7;
-  --text-secondary: #8b8b8e;
-  --text-muted: #5c5c5f;
-  --accent: #5c7cfa;
-  --accent-hover: #7c8cfa;
-  --accent-muted: rgba(92, 124, 250, 0.15);
-  --border: #3d3d40;
-  --border-subtle: #2d2d30;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  /* Vapors Dark theme (default) */
+  --bg-primary: #0f0f23;
+  --bg-secondary: #1a1a2e;
+  --bg-sidebar: #0d0d1a;
+  --bg-hover: #1f1f3d;
+  --bg-active: #252542;
+  --text-primary: #e4e4f0;
+  --text-secondary: #b8b8d0;
+  --text-muted: #6a6a8a;
+  --accent: #7c9cff;
+  --accent-hover: #a5b4fc;
+  --accent-muted: rgba(124, 156, 255, 0.15);
+  --border: #1a1a2e;
+  --border-subtle: #252542;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   --radius: 6px;
   --radius-lg: 10px;
   --sidebar-width: 260px;
   --header-height: 56px;
-  --scrollbar: #3d3d40;
+  --scrollbar: #1a1a2e;
 }
 
 /* Solarized Light Theme */
@@ -32,9 +32,9 @@
   --text-primary: #657b83;
   --text-secondary: #586e75;
   --text-muted: #93a1a1;
-  --accent: #268bd2;
-  --accent-hover: #2fa4e2;
-  --accent-muted: rgba(38, 139, 210, 0.15);
+  --accent: #2aa198;
+  --accent-hover: #35c4b4;
+  --accent-muted: rgba(42, 161, 152, 0.15);
   --border: #d3cdb8;
   --border-subtle: #ddd6c5;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -398,19 +398,20 @@ html, body {
 .message-bubble ul, .message-bubble ol { margin: 0.4em 0; padding-left: 1.4em; }
 .message-bubble li { margin: 0.2em 0; }
 .message-bubble code {
-  background: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.2);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.9em;
   font-family: 'SF Mono', 'Fira Code', Menlo, monospace;
 }
 .message-bubble pre {
-  background: #0d0d0e;
-  color: #c5c5c7;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   padding: 10px 12px;
   border-radius: 6px;
   overflow-x: auto;
   margin: 0.5em 0;
+  border: 1px solid var(--border-subtle);
 }
 .message-bubble pre code {
   background: none;
@@ -421,10 +422,6 @@ html, body {
 /* Light theme code blocks */
 [data-theme="light"] .message-bubble code {
   background: rgba(0,0,0,0.1);
-}
-[data-theme="light"] .message-bubble pre {
-  background: #073642;
-  color: #839496;
 }
 .message-bubble strong { font-weight: 600; }
 .message-bubble em { font-style: italic; }
@@ -504,22 +501,10 @@ html, body {
 
 .input-container {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: flex-end;
   max-width: 900px;
   margin: 0 auto;
-}
-
-.input-wrapper {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding-left: 8px;
 }
 
 .search-mode-icon {
@@ -528,6 +513,27 @@ html, body {
   justify-content: center;
   color: var(--text-muted);
   flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
 }
 
 .message-input {
@@ -541,20 +547,12 @@ html, body {
   min-height: 48px;
   max-height: 200px;
   line-height: 1.5;
-  transition: border-color 0.15s, box-shadow 0.15s;
   background: transparent;
   color: var(--text-primary);
 }
 
-.input-wrapper:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-muted);
-}
-
 .message-input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-muted);
 }
 
 .message-input::placeholder {
@@ -992,15 +990,15 @@ html, body {
 }
 
 .tool-entry-icon.search {
-  color: #10b981;
+  color: var(--accent);
 }
 
 .tool-entry-icon.agent {
-  color: #f59e0b;
+  color: var(--text-secondary);
 }
 
 .tool-entry-icon.synthesize {
-  color: #8b5cf6;
+  color: var(--accent);
 }
 
 .tool-entry-icon.complete {

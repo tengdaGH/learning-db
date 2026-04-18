@@ -1,6 +1,7 @@
 """
 Flask web UI for Personal Learning Database.
 """
+import os
 import re
 import time
 import json
@@ -85,8 +86,8 @@ def _call_minimax(prompt: str, system: str = "", max_tokens: int = 1024):
     import anthropic
 
     client = anthropic.Anthropic(
-        auth_token=os.getenv("ANTHROPIC_AUTH_TOKEN"),
-        base_url=os.getenv("ANTHROPIC_BASE_URL", "https://api.minimaxi.com/anthropic"),
+        auth_token=os.getenv("MINIMAX_API_KEY"),
+        base_url=os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.io/v1"),
     )
 
     messages = []
@@ -117,8 +118,8 @@ def _call_claude(prompt: str, system: str = "", max_tokens: int = 1024):
     import anthropic
 
     client = anthropic.Anthropic(
-        auth_token=os.getenv("ANTHROPIC_AUTH_TOKEN"),
-        base_url=os.getenv("ANTHROPIC_BASE_URL", "https://api.minimaxi.com/anthropic"),
+        auth_token=os.getenv("MINIMAX_API_KEY"),
+        base_url=os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.io/v1"),
     )
 
     for attempt in range(3):

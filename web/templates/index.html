@@ -166,8 +166,8 @@
       <!-- Input Area -->
       <div class="input-area">
         <div class="input-container">
+          <div class="search-mode-icon" id="searchModeIcon"></div>
           <div class="input-wrapper">
-            <div class="search-mode-icon" id="searchModeIcon"></div>
             <textarea
               class="message-input"
               id="messageInput"
@@ -192,6 +192,8 @@
     let currentModel = 'MiniMax-M2.7-highspeed';
     let currentSessionId = null;
     let sessions = [];
+    let abortController = null;
+    let lastEscapeTime = 0;
 
     // Search modes: 0 = LLM only, 1 = Single Agent (Tavily), 2 = Deep Research
     const SEARCH_MODES = [
@@ -361,9 +363,22 @@
       localStorage.setItem('theme', theme);
     }
 
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
+    function getSystemTheme() {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else {
+      setTheme(getSystemTheme());
+    }
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('theme')) {
+        setTheme(e.matches ? 'dark' : 'light');
+      }
+    });
 
     themeToggle.addEventListener('click', () => {
       const current = body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
@@ -478,6 +493,7 @@
       const toolLog = document.getElementById('toolLog');
       const toolLogContent = document.getElementById('toolLogContent');
       toolLogContent.innerHTML = '';
+      const mode = SEARCH_MODES[currentSearchMode];
       if (mode.id !== 'llm') {
         toolLog.classList.add('visible');
       }
@@ -485,9 +501,9 @@
       // Start streaming response
       isStreaming = true;
       sendBtn.disabled = true;
+      abortController = new AbortController();
 
       try {
-        const mode = SEARCH_MODES[currentSearchMode];
         let endpoint = '/chat';
         if (mode.id === 'single') endpoint = '/chat/web';
         else if (mode.id === 'deep') endpoint = '/chat/deep';
@@ -499,7 +515,8 @@
           }),
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-          }
+          },
+          signal: abortController.signal
         });
 
         const reader = response.body.getReader();
@@ -571,15 +588,37 @@
         }
 
       } catch (error) {
-        console.error('Error:', error);
-        removeTypingIndicator(typingId);
-        bubbleDiv.textContent = 'Sorry, I encountered an error. Please try again.';
+        if (error.name === 'AbortError') {
+          bubbleDiv.innerHTML = '<em>(stopped)</em>';
+        } else {
+          console.error('Error:', error);
+          removeTypingIndicator(typingId);
+          bubbleDiv.textContent = 'Sorry, I encountered an error. Please try again.';
+        }
       }
 
       isStreaming = false;
+      abortController = null;
       sendBtn.disabled = !messageInput.value.trim();
       scrollToBottom();
     }
+
+    function stopStreaming() {
+      if (abortController) {
+        abortController.abort();
+        abortController = null;
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const now = Date.now();
+        if (now - lastEscapeTime < 300) {
+          stopStreaming();
+        }
+        lastEscapeTime = now;
+      }
+    });
 
     // ─── Add Message to Container ──────────────────────────────────────────────
     function addMessage(role, content) {
