@@ -28,22 +28,6 @@
           </svg>
           Learning DB
         </div>
-        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
-          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
         <button class="new-chat-btn" id="newChatBtn">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -96,6 +80,22 @@
       <header class="chat-header">
         <div class="chat-title">New Chat</div>
         <div class="header-controls">
+          <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
           <div class="model-selector">
             <label for="modelSelect">Model:</label>
             <select id="modelSelect" name="model">
@@ -133,11 +133,33 @@
         </div>
 
         <div class="empty-state" id="emptyState">
-          <svg class="empty-state-icon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-          <div class="empty-state-title">Start a conversation</div>
-          <div class="empty-state-text">Ask me anything about what you're learning. I'll help explain concepts and log your knowledge.</div>
+          <div class="empty-state-title">Choose a mode to start</div>
+          <div class="empty-state-modes">
+            <button class="mode-option" data-mode="0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0 .47 4.96l3.08 1.08a16 16 0 0 0 5.58 1.08 2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-.46-4.96A2.5 2.5 0 0 0 12 4.5"></path>
+                <path d="M12 4.5a2.5 2.5 0 0 1 4.96-.46 2.5 2.5 0 0 1 1.98 3 2.5 2.5 0 0 1-.47 4.96l-3.08 1.08a16 16 0 0 1-5.58 1.08 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 .46-4.96A2.5 2.5 0 0 1 12 4.5"></path>
+                <path d="M12 4.5V17"></path>
+              </svg>
+              <span>Quicky</span>
+            </button>
+            <button class="mode-option" data-mode="1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>Online Search</span>
+            </button>
+            <button class="mode-option" data-mode="2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span>Deep Search</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -145,6 +167,7 @@
       <div class="input-area">
         <div class="input-container">
           <div class="input-wrapper">
+            <div class="search-mode-icon" id="searchModeIcon"></div>
             <textarea
               class="message-input"
               id="messageInput"
@@ -283,6 +306,17 @@
       loadKnowledgeStats();
       loadHistory();
       messageInput.focus();
+
+      // Mode option click handlers
+      document.querySelectorAll('.mode-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const modeIndex = parseInt(btn.dataset.mode);
+          currentSearchMode = modeIndex;
+          updateModeIndicator();
+          updateSearchModeIcon();
+          messageInput.focus();
+        });
+      });
     });
 
     // ─── Event Listeners ───────────────────────────────────────────────────────
@@ -370,7 +404,14 @@
       modeIndicator.parentElement.title = mode.title;
     }
 
+    function updateSearchModeIcon() {
+      const mode = SEARCH_MODES[currentSearchMode];
+      const searchModeIcon = document.getElementById('searchModeIcon');
+      searchModeIcon.innerHTML = getModeIcon(mode.icon);
+    }
+
     updateModeIndicator();
+    updateSearchModeIcon();
 
     // Cycle through modes on Shift+Tab
     document.addEventListener('keydown', (e) => {
@@ -378,6 +419,7 @@
         e.preventDefault();
         currentSearchMode = (currentSearchMode + 1) % SEARCH_MODES.length;
         updateModeIndicator();
+        updateSearchModeIcon();
       }
     });
 
@@ -385,6 +427,7 @@
     document.getElementById('searchModeSelector').addEventListener('click', () => {
       currentSearchMode = (currentSearchMode + 1) % SEARCH_MODES.length;
       updateModeIndicator();
+      updateSearchModeIcon();
     });
 
     digestLink.addEventListener('click', async (e) => {
