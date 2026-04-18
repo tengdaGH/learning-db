@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learning DB</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Toggle (Mobile) -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          </svg>
+          Learning DB
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <button class="new-chat-btn" id="newChatBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          New Chat
+        </button>
+      </div>
+
+      <!-- Topics Section -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Topics</div>
+        <div class="topics-list" id="topicsList">
+          <!-- Topics loaded dynamically -->
+        </div>
+      </div>
+
+      <!-- Knowledge Stats -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Your Knowledge</div>
+        <div class="knowledge-stats" id="knowledgeStats">
+          <!-- Stats loaded dynamically -->
+        </div>
+      </div>
+
+      <!-- Weekly Digest -->
+      <a href="#" class="digest-link" id="digestLink">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Weekly Digest
+      </a>
+
+      <!-- History Section -->
+      <div class="sidebar-section" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+        <div class="sidebar-section-title">History</div>
+        <div class="history-list" id="historyList">
+          <!-- Sessions grouped by date -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Chat Header -->
+      <header class="chat-header">
+        <div class="chat-title">New Chat</div>
+        <div class="header-controls">
+          <div class="model-selector">
+            <label for="modelSelect">Model:</label>
+            <select id="modelSelect" name="model">
+              <option value="MiniMax-M2.7-highspeed">MiniMax M2.7</option>
+              <option value="claude-haiku-4-5-20251001">Claude Haiku</option>
+            </select>
+          </div>
+          <div class="search-mode-selector" id="searchModeSelector" title="Press Shift+Tab to cycle modes">
+            <div class="mode-indicator" id="modeIndicator">
+              <!-- Mode icon and label injected by JS -->
+            </div>
+            <div class="mode-hint">Shift+Tab</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Messages Container -->
+      <div class="messages-container" id="messagesContainer">
+        <!-- Tool Log Panel -->
+        <div class="tool-log" id="toolLog">
+          <div class="tool-log-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>Activity</span>
+            <button class="tool-log-close" id="toolLogClose">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="tool-log-content" id="toolLogContent"></div>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <svg class="empty-state-icon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <div class="empty-state-title">Start a conversation</div>
+          <div class="empty-state-text">Ask me anything about what you're learning. I'll help explain concepts and log your knowledge.</div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-container">
+          <div class="input-wrapper">
+            <textarea
+              class="message-input"
+              id="messageInput"
+              placeholder="Ask a question..."
+              rows="1"
+            ></textarea>
+          </div>
+          <button class="send-btn" id="sendBtn" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ─── State ────────────────────────────────────────────────────────────────
+    let isStreaming = false;
+    let currentModel = 'MiniMax-M2.7-highspeed';
+    let currentSessionId = null;
+    let sessions = [];
+
+    // Search modes: 0 = LLM only, 1 = Single Agent (Tavily), 2 = Deep Research
+    const SEARCH_MODES = [
+      { id: 'llm', label: 'LLM', icon: 'brain', title: 'Quick LLM Answer' },
+      { id: 'single', label: 'Web', icon: 'search', title: 'Single Agent + Tavily Search' },
+      { id: 'deep', label: 'Deep', icon: 'team', title: 'Deep Research with Agent Team' }
+    ];
+    let currentSearchMode = 0;
+
+    // ─── Session Management ────────────────────────────────────────────────────
+    const SESSION_KEY = 'learning_db_sessions';
+    const CURRENT_SESSION_KEY = 'learning_db_current_session';
+
+    function generateSessionId() {
+      return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function getTodayKey() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function loadSessions() {
+      try {
+        const stored = localStorage.getItem(SESSION_KEY);
+        sessions = stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        sessions = [];
+      }
+    }
+
+    function saveSessions() {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
+    }
+
+    function createNewSession() {
+      loadSessions();
+      const sessionId = generateSessionId();
+      const session = {
+        id: sessionId,
+        created_at: new Date().toISOString(),
+        messages: [],
+        title: ''
+      };
+      sessions.unshift(session);
+      saveSessions();
+      currentSessionId = sessionId;
+      localStorage.setItem(CURRENT_SESSION_KEY, sessionId);
+      return session;
+    }
+
+    function getCurrentSession() {
+      loadSessions();
+      if (!currentSessionId) {
+        const stored = localStorage.getItem(CURRENT_SESSION_KEY);
+        if (stored) {
+          currentSessionId = stored;
+        }
+      }
+
+      let session = sessions.find(s => s.id === currentSessionId);
+      if (!session) {
+        session = createNewSession();
+      }
+      return session;
+    }
+
+    function saveMessageToSession(role, content) {
+      loadSessions();
+      const session = sessions.find(s => s.id === currentSessionId);
+      if (session) {
+        session.messages.push({
+          role: role,
+          content: content,
+          timestamp: new Date().toISOString()
+        });
+
+        // Auto-generate title from first user message
+        if (!session.title && role === 'user') {
+          session.title = content.substring(0, 50) + (content.length > 50 ? '...' : '');
+        }
+        saveSessions();
+      }
+    }
+
+    // Configure marked for synchronous rendering
+    marked.parse = marked.parse.bind(marked);
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      headerIds: false,
+      mangle: false
+    });
+
+    // ─── DOM Elements ─────────────────────────────────────────────────────────
+    const messagesContainer = document.getElementById('messagesContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const newChatBtn = document.getElementById('newChatBtn');
+    const modelSelect = document.getElementById('modelSelect');
+    const topicsList = document.getElementById('topicsList');
+    const knowledgeStats = document.getElementById('knowledgeStats');
+    const digestLink = document.getElementById('digestLink');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const emptyState = document.getElementById('emptyState');
+
+    // ─── Initialize ────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize session
+      getCurrentSession();
+      loadTopics();
+      loadKnowledgeStats();
+      loadHistory();
+      messageInput.focus();
+    });
+
+    // ─── Event Listeners ───────────────────────────────────────────────────────
+    messageInput.addEventListener('input', autoResize);
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    newChatBtn.addEventListener('click', () => {
+      createNewSession();
+      messagesContainer.innerHTML = '';
+      messagesContainer.appendChild(emptyState);
+      emptyState.style.display = 'flex';
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+      sendBtn.disabled = !messageInput.value.trim();
+      messageInput.focus();
+      renderHistory();
+    });
+
+    modelSelect.addEventListener('change', (e) => {
+      currentModel = e.target.value;
+    });
+
+    // ─── Theme Toggle ──────────────────────────────────────────────────────────
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+
+    function setTheme(theme) {
+      if (theme === 'light') {
+        body.setAttribute('data-theme', 'light');
+        themeToggle.classList.add('light');
+      } else {
+        body.removeAttribute('data-theme');
+        themeToggle.classList.remove('light');
+      }
+      localStorage.setItem('theme', theme);
+    }
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+      const current = body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      setTheme(current === 'light' ? 'dark' : 'light');
+    });
+
+    // ─── Search Mode Cycling ────────────────────────────────────────────────────
+    const modeIndicator = document.getElementById('modeIndicator');
+
+    function getModeIcon(iconType) {
+      if (iconType === 'brain') {
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0 .47 4.96l3.08 1.08a16 16 0 0 0 5.58 1.08 2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-.46-4.96A2.5 2.5 0 0 0 12 4.5"></path>
+          <path d="M12 4.5a2.5 2.5 0 0 1 4.96-.46 2.5 2.5 0 0 1 1.98 3 2.5 2.5 0 0 1-.47 4.96l-3.08 1.08a16 16 0 0 1-5.58 1.08 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 .46-4.96A2.5 2.5 0 0 1 12 4.5"></path>
+          <path d="M12 4.5V17"></path>
+        </svg>`;
+      } else if (iconType === 'search') {
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>`;
+      } else if (iconType === 'team') {
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>`;
+      }
+    }
+
+    function updateModeIndicator() {
+      const mode = SEARCH_MODES[currentSearchMode];
+      modeIndicator.innerHTML = `
+        <span class="mode-icon">${getModeIcon(mode.icon)}</span>
+        <span class="mode-label">${mode.label}</span>
+      `;
+      modeIndicator.parentElement.title = mode.title;
+    }
+
+    updateModeIndicator();
+
+    // Cycle through modes on Shift+Tab
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab' && e.shiftKey) {
+        e.preventDefault();
+        currentSearchMode = (currentSearchMode + 1) % SEARCH_MODES.length;
+        updateModeIndicator();
+      }
+    });
+
+    // Click on mode selector also cycles
+    document.getElementById('searchModeSelector').addEventListener('click', () => {
+      currentSearchMode = (currentSearchMode + 1) % SEARCH_MODES.length;
+      updateModeIndicator();
+    });
+
+    digestLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      alert('Weekly digest feature - coming soon!');
+    });
+
+    sidebarToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+      if (window.innerWidth <= 768 &&
+          sidebar.classList.contains('open') &&
+          !sidebar.contains(e.target) &&
+          !sidebarToggle.contains(e.target)) {
+        sidebar.classList.remove('open');
+      }
+    });
+
+    // ─── Auto-resize textarea ──────────────────────────────────────────────────
+    function autoResize() {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
+      sendBtn.disabled = !messageInput.value.trim() || isStreaming;
+    }
+
+    // ─── Send Message ──────────────────────────────────────────────────────────
+    async function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message || isStreaming) return;
+
+      // Hide empty state
+      emptyState.style.display = 'none';
+
+      // Add user message
+      addMessage('user', message);
+      saveMessageToSession('user', message);
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      // Show typing indicator
+      const typingId = showTypingIndicator();
+
+      // Show tool log for web/deep modes
+      const toolLog = document.getElementById('toolLog');
+      const toolLogContent = document.getElementById('toolLogContent');
+      toolLogContent.innerHTML = '';
+      if (mode.id !== 'llm') {
+        toolLog.classList.add('visible');
+      }
+
+      // Start streaming response
+      isStreaming = true;
+      sendBtn.disabled = true;
+
+      try {
+        const mode = SEARCH_MODES[currentSearchMode];
+        let endpoint = '/chat';
+        if (mode.id === 'single') endpoint = '/chat/web';
+        else if (mode.id === 'deep') endpoint = '/chat/deep';
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          body: new URLSearchParams({
+            message: message,
+            model: currentModel
+          }),
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          }
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let assistantMessage = '';
+        let wasLogged = false;
+
+        // Create assistant message bubble
+        const assistantDiv = createMessageElement('assistant', '');
+        messagesContainer.appendChild(assistantDiv);
+        const bubbleDiv = assistantDiv.querySelector('.message-bubble');
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              const eventType = line.slice(7).trim();
+              continue;
+            }
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.token) {
+                  assistantMessage += data.token;
+                  bubbleDiv.innerHTML = marked.parse(assistantMessage);
+                  scrollToBottom();
+                }
+                if (data.tool) {
+                  addToolEntry(data.tool);
+                }
+                if (data.model) {
+                  currentModel = data.model;
+                }
+                if (data.was_logged !== undefined) {
+                  wasLogged = data.was_logged;
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            }
+          }
+        }
+
+        // Remove typing indicator
+        removeTypingIndicator(typingId);
+        toolLog.classList.remove('visible');
+
+        // Save assistant message to session
+        if (assistantMessage) {
+          saveMessageToSession('assistant', assistantMessage);
+        }
+
+        // Add logged badge if applicable
+        if (wasLogged) {
+          const metaDiv = assistantDiv.querySelector('.message-meta');
+          if (metaDiv) {
+            const badge = document.createElement('span');
+            badge.className = 'logged-badge';
+            badge.textContent = 'Logged';
+            metaDiv.appendChild(badge);
+          }
+          // Refresh knowledge stats
+          loadKnowledgeStats();
+        }
+
+      } catch (error) {
+        console.error('Error:', error);
+        removeTypingIndicator(typingId);
+        bubbleDiv.textContent = 'Sorry, I encountered an error. Please try again.';
+      }
+
+      isStreaming = false;
+      sendBtn.disabled = !messageInput.value.trim();
+      scrollToBottom();
+    }
+
+    // ─── Add Message to Container ──────────────────────────────────────────────
+    function addMessage(role, content) {
+      const div = createMessageElement(role, content);
+      messagesContainer.appendChild(div);
+      scrollToBottom();
+      return div;
+    }
+
+    function createMessageElement(role, content) {
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      // Render markdown for assistant messages, escape HTML for user messages
+      const bubbleContent = role === 'assistant'
+        ? marked.parse(content)
+        : escapeHtml(content);
+      div.innerHTML = `
+        <div class="message-bubble">${bubbleContent}</div>
+        <div class="message-meta"></div>
+      `;
+      return div;
+    }
+
+    // ─── Tool Log ──────────────────────────────────────────────────────────────
+    function addToolEntry(tool) {
+      const toolLogContent = document.getElementById('toolLogContent');
+      const iconMap = {
+        thinking: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0 .47 4.96l3.08 1.08a16 16 0 0 0 5.58 1.08 2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-.46-4.96A2.5 2.5 0 0 0 12 4.5"></path>
+          <path d="M12 4.5a2.5 2.5 0 0 1 4.96-.46 2.5 2.5 0 0 1 1.98 3 2.5 2.5 0 0 1-.47 4.96l-3.08 1.08a16 16 0 0 1-5.58 1.08 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 .46-4.96A2.5 2.5 0 0 1 12 4.5"></path>
+        </svg>`,
+        search: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>`,
+        agent: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>`,
+        synthesize: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>`,
+        complete: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>`
+      };
+
+      const time = new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      const icon = iconMap[tool.type] || iconMap.complete;
+
+      const entry = document.createElement('div');
+      entry.className = 'tool-entry';
+      entry.innerHTML = `
+        <span class="tool-entry-icon ${tool.type}">${icon}</span>
+        <span class="tool-entry-text">${escapeHtml(tool.message)}</span>
+        <span class="tool-entry-time">${time}</span>
+      `;
+      toolLogContent.appendChild(entry);
+      toolLogContent.scrollTop = toolLogContent.scrollHeight;
+    }
+
+    // Close tool log
+    document.getElementById('toolLogClose').addEventListener('click', () => {
+      document.getElementById('toolLog').classList.remove('visible');
+    });
+
+    // ─── Typing Indicator ───────────────────────────────────────────────────────
+    function showTypingIndicator() {
+      const id = 'typing-' + Date.now();
+      const div = document.createElement('div');
+      div.id = id;
+      div.className = 'message assistant';
+      const mode = SEARCH_MODES[currentSearchMode];
+      let indicatorText = '';
+      if (mode.id === 'single') indicatorText = 'Searching the web...';
+      else if (mode.id === 'deep') indicatorText = 'Conducting deep research...';
+      div.innerHTML = `
+        <div class="typing-indicator">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+        ${indicatorText ? `<div class="typing-text">${indicatorText}</div>` : ''}
+      `;
+      messagesContainer.appendChild(div);
+      scrollToBottom();
+      return id;
+    }
+
+    function removeTypingIndicator(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    // ─── Scroll to Bottom ───────────────────────────────────────────────────────
+    function scrollToBottom() {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // ─── Escape HTML ────────────────────────────────────────────────────────────
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ─── Load Topics ────────────────────────────────────────────────────────────
+    async function loadTopics() {
+      try {
+        const response = await fetch('/api/topics');
+        const data = await response.json();
+        renderTopics(data.topics || []);
+      } catch (error) {
+        console.error('Error loading topics:', error);
+      }
+    }
+
+    function renderTopics(topics) {
+      if (topics.length === 0) {
+        topicsList.innerHTML = '<div class="topic-item" style="color: var(--text-muted); cursor: default;">No topics yet</div>';
+        return;
+      }
+
+      topicsList.innerHTML = topics.map(topic => `
+        <div class="topic-item topic-parent" data-topic-id="${topic.id}" data-topic="${topic.name}">
+          <svg class="topic-expand-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <svg class="topic-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          ${escapeHtml(topic.name)}
+          <span class="topic-count">${topic.qa_count || 0}</span>
+        </div>
+        <div class="topic-entries" id="entries-${topic.id}" data-topic-id="${topic.id}" style="display: none;">
+          <div class="entries-loading">Loading...</div>
+        </div>
+      `).join('');
+
+      // Attach click handlers
+      document.querySelectorAll('.topic-parent').forEach(el => {
+        el.addEventListener('click', handleTopicClick);
+      });
+    }
+
+    async function handleTopicClick(e) {
+      const parentEl = e.currentTarget;
+      const topicId = parentEl.dataset.topicId;
+      const entriesContainer = document.getElementById(`entries-${topicId}`);
+
+      // Toggle expansion
+      if (parentEl.classList.contains('expanded')) {
+        parentEl.classList.remove('expanded');
+        entriesContainer.style.display = 'none';
+        return;
+      }
+
+      parentEl.classList.add('expanded');
+
+      // Fetch entries if not loaded
+      if (entriesContainer.dataset.loaded !== 'true') {
+        try {
+          const response = await fetch(`/api/topics/${topicId}/entries`);
+          const data = await response.json();
+          renderTopicEntries(topicId, data.entries || []);
+          entriesContainer.dataset.loaded = 'true';
+        } catch (error) {
+          entriesContainer.innerHTML = '<div class="entries-error">Failed to load entries</div>';
+        }
+      }
+
+      entriesContainer.style.display = 'block';
+    }
+
+    function renderTopicEntries(topicId, entries) {
+      const container = document.getElementById(`entries-${topicId}`);
+      if (entries.length === 0) {
+        container.innerHTML = '<div class="entry-item empty">No entries yet</div>';
+        return;
+      }
+
+      container.innerHTML = entries.map(entry => {
+        const date = new Date(entry.created_at).toLocaleDateString();
+        const questionPreview = entry.question.length > 60
+          ? entry.question.substring(0, 60) + '...'
+          : entry.question;
+        return `
+          <div class="entry-item" data-entry-id="${entry.id}" data-question="${escapeHtml(entry.question)}">
+            <div class="entry-question">${escapeHtml(questionPreview)}</div>
+            <div class="entry-date">${date}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Attach click handlers to entries
+      container.querySelectorAll('.entry-item:not(.empty)').forEach(el => {
+        el.addEventListener('click', handleEntryClick);
+      });
+    }
+
+    function handleEntryClick(e) {
+      const entryEl = e.currentTarget;
+      const question = entryEl.dataset.question;
+      messageInput.value = question;
+      messageInput.focus();
+      scrollToBottom();
+    }
+
+    // ─── Load Knowledge Stats ───────────────────────────────────────────────────
+    async function loadKnowledgeStats() {
+      try {
+        const response = await fetch('/api/knowledge');
+        const data = await response.json();
+        renderKnowledgeStats(data);
+      } catch (error) {
+        console.error('Error loading knowledge stats:', error);
+      }
+    }
+
+    function renderKnowledgeStats(data) {
+      const total = data.total_topics || 0;
+      const proficiencyLevels = data.proficiency_levels || { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+      // Calculate progress percentage (assuming level 4 is "mastered")
+      const mastered = proficiencyLevels[4] || 0;
+      const inProgress = proficiencyLevels[3] || 0;
+      const progress = total > 0 ? Math.round(((mastered + inProgress * 0.5) / total) * 100) : 0;
+
+      knowledgeStats.innerHTML = `
+        <div class="stat-row">
+          <span class="stat-label">Topics learned</span>
+          <span class="stat-value">${total}</span>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${progress}%"></div>
+          </div>
+          <div class="progress-label">
+            <span>Beginner</span>
+            <span>${progress}% proficiency</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // ─── API: Recent Entries ─────────────────────────────────────────────────────
+    async function loadRecentEntries() {
+      try {
+        const response = await fetch('/api/recent');
+        const data = await response.json();
+        return data.entries || [];
+      } catch (error) {
+        console.error('Error loading recent entries:', error);
+        return [];
+      }
+    }
+
+    // ─── History Management ────────────────────────────────────────────────────
+    async function loadHistory() {
+      loadSessions();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const historyList = document.getElementById('historyList');
+
+      if (sessions.length === 0) {
+        historyList.innerHTML = '<div class="history-empty">No history yet</div>';
+        return;
+      }
+
+      // Group by date
+      const grouped = {};
+      sessions.forEach(session => {
+        const dateKey = session.created_at.split('T')[0];
+        if (!grouped[dateKey]) {
+          grouped[dateKey] = [];
+        }
+        grouped[dateKey].push(session);
+      });
+
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (dateStr === getTodayKey()) return 'Today';
+        if (dateStr === yesterday.toISOString().split('T')[0]) return 'Yesterday';
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      };
+
+      let html = '';
+      Object.entries(grouped).forEach(([date, daySessions]) => {
+        html += `<div class="history-group">
+          <div class="history-date">${formatDate(date)}</div>`;
+        daySessions.forEach(session => {
+          const isActive = session.id === currentSessionId;
+          html += `<div class="history-item ${isActive ? 'active' : ''}" data-session-id="${session.id}">
+            <div class="history-title">${escapeHtml(session.title || 'New Chat')}</div>
+            <div class="history-meta">${session.messages.length} messages</div>
+          </div>`;
+        });
+        html += '</div>';
+      });
+
+      historyList.innerHTML = html;
+
+      // Attach click handlers
+      historyList.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', handleHistoryItemClick);
+      });
+    }
+
+    function handleHistoryItemClick(e) {
+      const sessionId = e.currentTarget.dataset.sessionId;
+      loadSession(sessionId);
+    }
+
+    function loadSession(sessionId) {
+      loadSessions();
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return;
+
+      currentSessionId = sessionId;
+      localStorage.setItem(CURRENT_SESSION_KEY, sessionId);
+
+      // Clear and rebuild messages
+      messagesContainer.innerHTML = '';
+      session.messages.forEach(msg => {
+        addMessage(msg.role, msg.content);
+      });
+
+      if (session.messages.length === 0) {
+        messagesContainer.appendChild(emptyState);
+        emptyState.style.display = 'flex';
+      }
+
+      renderHistory();
+      scrollToBottom();
+    }
+  </script>
+</body>
+</html>
