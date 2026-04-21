@@ -1,8 +1,8 @@
 """
 Learning Assistant Agent — suggests related knowledge and identifies gaps.
 """
-from db.queries import get_user_topics, get_all_topics, get_knowledge_graph
 
+from db.queries import get_user_topics
 
 # Define topic relationships: topic → [prerequisites, related, next_steps]
 TOPIC_MAP = {
@@ -81,7 +81,9 @@ def suggest_related() -> str:
         if topic in TOPIC_MAP:
             for related in TOPIC_MAP[topic]["related"]:
                 if related not in [t["topic_name"] for t in user_topics]:
-                    suggestions.append(f"Since you studied {topic}, you might enjoy learning about {related}")
+                    suggestions.append(
+                        f"Since you studied {topic}, you might enjoy learning about {related}"
+                    )
 
     if suggestions:
         return "\n".join([f"  • {s}" for s in suggestions[:8]])
@@ -102,11 +104,13 @@ def find_gaps() -> str:
         if topic in TOPIC_MAP:
             for prereq in TOPIC_MAP[topic]["prerequisites"]:
                 if prereq not in user_topic_names and prereq not in covered:
-                    gaps.append({
-                        "topic": prereq,
-                        "why": f"helps understand {topic}",
-                        "how": "Ask me to explain it!"
-                    })
+                    gaps.append(
+                        {
+                            "topic": prereq,
+                            "why": f"helps understand {topic}",
+                            "how": "Ask me to explain it!",
+                        }
+                    )
                     covered.add(prereq)
 
     if gaps:

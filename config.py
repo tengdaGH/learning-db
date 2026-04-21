@@ -2,11 +2,13 @@
 Centralized configuration for the Personal Learning Database.
 Reads from environment variables with sensible defaults.
 """
+
 import os
 from pathlib import Path
 
 # Load .env file if present
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 # ─── Database ─────────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 """
 Unified LLM client for calling MiniMax via Anthropic-compatible API.
 """
+
 import time
 import anthropic
 import config
@@ -9,13 +10,13 @@ import config
 def call_llm(prompt: str, system: str = "", max_tokens: int = 1024, stream: bool = False):
     """
     Call MiniMax API via Anthropic-compatible SDK.
-    
+
     Args:
         prompt: The user prompt
         system: Optional system message
         max_tokens: Maximum tokens to generate
         stream: Whether to stream the response
-        
+
     Returns:
         Response object (streaming or complete)
     """
@@ -40,7 +41,7 @@ def call_llm(prompt: str, system: str = "", max_tokens: int = 1024, stream: bool
             return response
         except Exception as e:
             if attempt < 2:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
                 continue
             raise e
 
@@ -48,10 +49,10 @@ def call_llm(prompt: str, system: str = "", max_tokens: int = 1024, stream: bool
 def extract_text_from_response(response) -> str:
     """
     Extract text content from a non-streaming response.
-    
+
     Args:
         response: The response from call_llm with stream=False
-        
+
     Returns:
         Extracted text string
     """

@@ -2,7 +2,7 @@
 Research Coordinator — orchestrates parallel research agents for deep investigation.
 Decomposes complex questions into sub-questions, researches each, synthesizes results.
 """
-import time
+
 from typing import List, Dict, Any
 from db.queries import (
     add_qa_entry,
@@ -77,19 +77,35 @@ class ResearchCoordinator:
         log, _ = should_log(question)
 
         # Decompose the question
-        yield ('tool', {'type': 'thinking', 'message': 'Analyzing your question...'})
+        yield ("tool", {"type": "thinking", "message": "Analyzing your question..."})
         sub_questions = self._decompose_question(question)
-        yield ('tool', {'type': 'thinking', 'message': f'Decomposed into {len(sub_questions)} research areas'})
+        yield (
+            "tool",
+            {"type": "thinking", "message": f"Decomposed into {len(sub_questions)} research areas"},
+        )
 
         # Run research on each sub-question
         sub_results = []
         for i, sq in enumerate(sub_questions, 1):
-            yield ('tool', {'type': 'agent', 'message': f'Researching area {i}/{len(sub_questions)}: {sq[:60]}...' if len(sq) > 60 else sq})
+            yield (
+                "tool",
+                {
+                    "type": "agent",
+                    "message": (
+                        f"Researching area {i}/{len(sub_questions)}: {sq[:60]}..."
+                        if len(sq) > 60
+                        else sq
+                    ),
+                },
+            )
             result = self._research_sub_question(sq)
             sub_results.append(result)
 
         # Synthesize results
-        yield ('tool', {'type': 'synthesize', 'message': 'Synthesizing findings into comprehensive answer...'})
+        yield (
+            "tool",
+            {"type": "synthesize", "message": "Synthesizing findings into comprehensive answer..."},
+        )
         synthesis = self._synthesize_results(question, sub_results)
         sources = self._collect_all_sources(sub_results)
 
@@ -115,10 +131,11 @@ class ResearchCoordinator:
                 was_logged = True
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).error(f"Error logging to DB: {e}")
 
-        yield ('tool', {'type': 'complete', 'message': 'Research complete'})
-        yield ('done', {'was_logged': was_logged, 'sources': sources, 'answer': synthesis})
+        yield ("tool", {"type": "complete", "message": "Research complete"})
+        yield ("done", {"was_logged": was_logged, "sources": sources, "answer": synthesis})
 
     def _decompose_question(self, question: str) -> List[str]:
         """Use LLM to decompose a complex question into sub-questions."""
@@ -139,13 +156,13 @@ Output:
         response = extract_text_from_response(response)
 
         # Parse sub-questions from response
-        lines = response.strip().split('\n')
+        lines = response.strip().split("\n")
         sub_questions = []
         for line in lines:
             line = line.strip()
-            for prefix in ['1.', '2.', '3.', '4.', '5.', '1:', '2:', '3:', '4:', '5:', '- ']:
+            for prefix in ["1.", "2.", "3.", "4.", "5.", "1:", "2:", "3:", "4:", "5:", "- "]:
                 if line.startswith(prefix):
-                    sub_questions.append(line[len(prefix):].strip())
+                    sub_questions.append(line[len(prefix) :].strip())
                     break
 
         if not sub_questions:
@@ -181,20 +198,22 @@ Provide a thorough, factual answer that could be used as part of a comprehensive
         answer_text = extract_text_from_response(answer)
 
         return {
-            'question': sub_question,
-            'answer': answer_text,
-            'web_results': web_results,
-            'sources': [r.get('url', '') for r in web_results if r.get('url')]
+            "question": sub_question,
+            "answer": answer_text,
+            "web_results": web_results,
+            "sources": [r.get("url", "") for r in web_results if r.get("url")],
         }
 
     def _synthesize_results(self, original_question: str, sub_results: List[Dict]) -> str:
         """Synthesize all sub-results into a comprehensive answer."""
         user_context = self._build_user_context()
 
-        sub_answers_text = "\n\n".join([
-            f"SUB-QUESTION {i+1}: {r['question']}\n\nANSWER:\n{r['answer']}"
-            for i, r in enumerate(sub_results)
-        ])
+        sub_answers_text = "\n\n".join(
+            [
+                f"SUB-QUESTION {i+1}: {r['question']}\n\nANSWER:\n{r['answer']}"
+                for i, r in enumerate(sub_results)
+            ]
+        )
 
         system = f"""You are a research synthesizer. Based on the sub-research results below, provide a comprehensive, well-structured answer to the original question.
 
@@ -225,7 +244,7 @@ INSTRUCTIONS:
         sources = []
         seen = set()
         for result in sub_results:
-            for url in result.get('sources', []):
+            for url in result.get("sources", []):
                 if url and url not in seen:
                     seen.add(url)
                     sources.append(url)
@@ -251,6 +270,11 @@ INSTRUCTIONS:
         lines = ["They have explored these topics:"]
         for t in self.user_topics[:10]:
             lvl = t.get("proficiency_level", 1)
-            lvl_words = {1: "just heard of it", 2: "understands basics", 3: "can apply it", 4: "can teach it"}
+            lvl_words = {
+                1: "just heard of it",
+                2: "understands basics",
+                3: "can apply it",
+                4: "can teach it",
+            }
             lines.append(f"  - {t['topic_name']}: {lvl_words.get(lvl, 'unknown')}")
         return "\n".join(lines)

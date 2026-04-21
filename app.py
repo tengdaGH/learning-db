@@ -1,7 +1,7 @@
 """
 Flask web UI for Personal Learning Database.
 """
-import os
+
 import re
 import time
 import json
@@ -16,7 +16,6 @@ import config
 logger = logging.getLogger(__name__)
 
 from db.queries import (
-    get_all_topics,
     get_all_topics_with_counts,
     get_user_knowledge,
     get_recent_qa_entries,
@@ -25,7 +24,6 @@ from db.queries import (
     update_user_knowledge,
     get_qa_entries_by_topic_id,
     get_new_entries_today,
-    set_tags_for_entry,
 )
 from agents.tag_manager import tag_entry
 from services.auto_log import should_log, estimate_confidence
@@ -48,17 +46,17 @@ def link_citations_in_markdown(text: str, sources: list) -> str:
         num = match.group(1)
         if num in citation_map:
             url = citation_map[num]
-            return f'[{num}]({url})'
+            return f"[{num}]({url})"
         return match.group(0)
 
     # Replace [N] citation markers in the body (not in URLs or the Sources header line)
     # Only replace [N] that appear outside of URLs and outside of the Sources section definition
-    lines = text.split('\n')
+    lines = text.split("\n")
     in_sources_section = False
     result_lines = []
 
     for line in lines:
-        if re.match(r'^##?\s*Sources', line, re.IGNORECASE):
+        if re.match(r"^##?\s*Sources", line, re.IGNORECASE):
             in_sources_section = True
             result_lines.append(line)
             continue
@@ -66,41 +64,72 @@ def link_citations_in_markdown(text: str, sources: list) -> str:
         if in_sources_section:
             # In Sources section, convert numbered list items to markdown links
             # Format might be: [1] https://url or 1. https://url or - https://url
-            numbered_link = re.sub(r'\[(\d+)\]\s+(https?://\S+)', r'[\1](\2)', line)
+            numbered_link = re.sub(r"\[(\d+)\]\s+(https?://\S+)", r"[\1](\2)", line)
             result_lines.append(numbered_link)
         else:
             # Outside Sources section, replace [N] with [N](url) if we have that citation
             # Be careful not to replace [N] inside URLs or already-linked markdown
             # Replace [N] with [N](url) if not already a markdown link
             # Use negative lookahead to avoid re-linking [N](url)
-            replaced = re.sub(r'\[(\d+)\](?!\()', replace_citation, line)
+            replaced = re.sub(r"\[(\d+)\](?!\()", replace_citation, line)
             result_lines.append(replaced)
 
-    return '\n'.join(result_lines)
+    return "\n".join(result_lines)
 
 
 app = Flask(__name__, static_folder="web/static", template_folder="web/templates")
 
 # Topics that warrant web search
 WEB_SEARCH_TRIGGERS = [
-    "gpt", "claude", "llm", "large language model", "chatgpt",
-    "openai", "anthropic", "ai model", "language model",
-    "machine learning model", "deep learning",
-    "new release", "latest version", "latest model",
-    "cursor", "copilot", "github copilot",
-    "react", "nextjs", "vue", "angular", "svelte",
-    "python 3", "typescript", "rust", "golang",
-    "aws", "azure", "gcp", "google cloud",
-    "docker", "kubernetes",
-    "ios", "android", "swift", "kotlin",
-    "web development", "frontend",
+    "gpt",
+    "claude",
+    "llm",
+    "large language model",
+    "chatgpt",
+    "openai",
+    "anthropic",
+    "ai model",
+    "language model",
+    "machine learning model",
+    "deep learning",
+    "new release",
+    "latest version",
+    "latest model",
+    "cursor",
+    "copilot",
+    "github copilot",
+    "react",
+    "nextjs",
+    "vue",
+    "angular",
+    "svelte",
+    "python 3",
+    "typescript",
+    "rust",
+    "golang",
+    "aws",
+    "azure",
+    "gcp",
+    "google cloud",
+    "docker",
+    "kubernetes",
+    "ios",
+    "android",
+    "swift",
+    "kotlin",
+    "web development",
+    "frontend",
 ]
 
 
 def _should_search_web(question: str) -> bool:
     """Decide whether to search the web for current info."""
     q = question.lower()
-    if re.search(r"gpt-\d|claude-?\d|react-?\d+|vue-?\d+|angular-?\d+|python\s+v?3\.\d+|typescript\s+v?\d|version\s+\d", question, re.IGNORECASE):
+    if re.search(
+        r"gpt-\d|claude-?\d|react-?\d+|vue-?\d+|angular-?\d+|python\s+v?3\.\d+|typescript\s+v?\d|version\s+\d",
+        question,
+        re.IGNORECASE,
+    ):
         return True
     return any(trigger in q for trigger in WEB_SEARCH_TRIGGERS)
 
@@ -137,12 +166,18 @@ def _build_user_context(user_topics: list) -> str:
     lines = ["They have explored these topics:"]
     for t in user_topics[:10]:
         lvl = t.get("proficiency_level", 1)
-        lvl_words = {1: "just heard of it", 2: "understands basics", 3: "can apply it", 4: "can teach it"}
+        lvl_words = {
+            1: "just heard of it",
+            2: "understands basics",
+            3: "can apply it",
+            4: "can teach it",
+        }
         lines.append(f"  - {t['topic_name']}: {lvl_words.get(lvl, 'unknown')}")
     return "\n".join(lines)
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
+
 
 @app.route("/")
 def index():
@@ -157,18 +192,18 @@ def chat():
     Form data: message, model (optional, defaults to MiniMax)
     """
     message = request.form.get("message", "").strip()
-    model = request.form.get("model", config.MINIMAX_MODEL)
 
     if not message:
         return {"error": "No message provided"}, 400
 
     # Get user topics for context
     from db.queries import get_user_topics
+
     user_topics = get_user_topics()
 
     # Build system prompt
     user_context = _build_user_context(user_topics)
-    system = f"""You are a patient, knowledgeable tutor for a curious teacher with no coding experience.
+    system = """You are a patient, knowledgeable tutor for a curious teacher with no coding experience.
 
 {user_context}
 
@@ -176,7 +211,7 @@ CONVERSATION STYLE:
 - Use simple, jargon-free language unless they use technical terms
 - Break complex topics step by step
 - Use everyday analogies when helpful
-- Be encouraging"""
+- Be encouraging""".format(user_context=user_context)
 
     # Check if we should do web search
     tavily_client = None
@@ -206,13 +241,13 @@ CONVERSATION STYLE:
         full_response = ""
 
         # Send model info event
-        yield f"event: model\ndata: {model}\n\n"
+        yield f"event: model\ndata: {config.MINIMAX_MODEL}\n\n"
 
         # Handle Anthropic SDK streaming events
         for event in llm_stream:
             # content_block_delta events have the streaming text
-            if hasattr(event, 'type') and event.type == 'content_block_delta':
-                if hasattr(event, 'delta') and hasattr(event.delta, 'text') and event.delta.text:
+            if hasattr(event, "type") and event.type == "content_block_delta":
+                if hasattr(event, "delta") and hasattr(event.delta, "text") and event.delta.text:
                     token = event.delta.text
                     full_response += token
                     yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
@@ -263,7 +298,6 @@ def chat_deep():
     Receives message, streams SSE response.
     """
     message = request.form.get("message", "").strip()
-    model = request.form.get("model", config.MINIMAX_MODEL)
 
     if not message:
         return {"error": "No message provided"}, 400
@@ -274,18 +308,18 @@ def chat_deep():
         full_response = ""
         research_sources = []
 
-        yield f"event: mode\ndata: deep\n\n"
+        yield "event: mode\ndata: deep\n\n"
 
         try:
             coordinator = ResearchCoordinator()
 
             for event_type, data in coordinator.deep_research_stream(message):
-                if event_type == 'tool':
+                if event_type == "tool":
                     yield f"event: tool\ndata: {json.dumps({'tool': data})}\n\n"
-                elif event_type == 'done':
-                    research_sources = data.get('sources', [])
-                    full_response = data.get('answer', '')
-                    was_logged = data.get('was_logged', False)
+                elif event_type == "done":
+                    research_sources = data.get("sources", [])
+                    full_response = data.get("answer", "")
+                    was_logged = data.get("was_logged", False)
 
                     # Link citations in markdown
                     full_response = link_citations_in_markdown(full_response, research_sources)
@@ -293,12 +327,12 @@ def chat_deep():
                     # Stream the final answer with small chunks
                     chunk_size = 20
                     for i in range(0, len(full_response), chunk_size):
-                        chunk = full_response[i:i+chunk_size]
+                        chunk = full_response[i : i + chunk_size]
                         yield f"event: token\ndata: {json.dumps({'token': chunk})}\n\n"
                         time.sleep(0.01)
 
         except Exception as e:
-            error_msg = f"Deep research error: {str(e)}"
+            error_msg = "Deep research error: " + str(e)
             yield f"event: token\ndata: {json.dumps({'token': error_msg})}\n\n"
             full_response = error_msg
 
@@ -320,12 +354,12 @@ def chat_web():
     Single agent mode — uses Tavily web search for comprehensive answers.
     """
     message = request.form.get("message", "").strip()
-    model = request.form.get("model", config.MINIMAX_MODEL)
 
     if not message:
         return {"error": "No message provided"}, 400
 
     from db.queries import get_user_topics
+
     user_topics = get_user_topics()
 
     # Always do Tavily search for web mode
@@ -334,30 +368,38 @@ def chat_web():
     extra_context = ""
 
     def generate():
-        nonlocal tavily_client, web_results, extra_context
+        nonlocal web_results, extra_context
 
         full_response = ""
         sources = []
 
-        yield f"event: mode\ndata: web\n\n"
-        yield f"event: model\ndata: {model}\n\n"
+        yield "event: mode\ndata: web\n\n"
+        yield f"event: model\ndata: {config.MINIMAX_MODEL}\n\n"
 
         # Emit search tool event
-        tool_data = json.dumps({'tool': {'type': 'search', 'message': 'Searching the web for relevant information...'}})
+        tool_data = json.dumps(
+            {"tool": {"type": "search", "message": "Searching the web for relevant information..."}}
+        )
         yield f"event: tool\ndata: {tool_data}\n\n"
 
         if tavily_client:
             web_results = _search_web(message, tavily_client)
             if web_results:
                 result_count = len(web_results)
-                tool_data = json.dumps({'tool': {'type': 'search', 'message': f'Found {result_count} web results'}})
+                tool_data = json.dumps(
+                    {"tool": {"type": "search", "message": f"Found {result_count} web results"}}
+                )
                 yield f"event: tool\ndata: {tool_data}\n\n"
                 extra_context = _build_web_context(web_results)
             else:
-                tool_data = json.dumps({'tool': {'type': 'search', 'message': 'No web results found'}})
+                tool_data = json.dumps(
+                    {"tool": {"type": "search", "message": "No web results found"}}
+                )
                 yield f"event: tool\ndata: {tool_data}\n\n"
 
-        tool_data = json.dumps({'tool': {'type': 'thinking', 'message': 'Generating answer with web context...'}})
+        tool_data = json.dumps(
+            {"tool": {"type": "thinking", "message": "Generating answer with web context..."}}
+        )
         yield f"event: tool\ndata: {tool_data}\n\n"
 
         user_context = _build_user_context(user_topics)
@@ -376,8 +418,8 @@ CONVERSATION STYLE:
         llm_stream = call_llm(message, system=system, max_tokens=1024, stream=True)
 
         for event in llm_stream:
-            if hasattr(event, 'type') and event.type == 'content_block_delta':
-                if hasattr(event, 'delta') and hasattr(event.delta, 'text') and event.delta.text:
+            if hasattr(event, "type") and event.type == "content_block_delta":
+                if hasattr(event, "delta") and hasattr(event.delta, "text") and event.delta.text:
                     token = event.delta.text
                     full_response += token
                     yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
@@ -415,7 +457,7 @@ CONVERSATION STYLE:
             except Exception as e:
                 logger.error(f"Error logging to DB: {e}")
 
-        tool_data = json.dumps({'tool': {'type': 'complete', 'message': 'Answer complete'}})
+        tool_data = json.dumps({"tool": {"type": "complete", "message": "Answer complete"}})
         yield f"event: tool\ndata: {tool_data}\n\n"
         yield f"event: done\ndata: {json.dumps({'was_logged': was_logged, 'sources': sources})}\n\n"
 
@@ -479,6 +521,7 @@ def api_stats_today():
 def api_review():
     """Trigger review agent, return digest."""
     from agents.review_agent import run_review
+
     digest = run_review()
     return {"digest": digest}
 
@@ -487,6 +530,7 @@ def api_review():
 def api_tags():
     """Return all tags with entry counts."""
     from db.queries import get_all_tags
+
     tags = get_all_tags()
     return {"tags": tags}
 
@@ -495,11 +539,13 @@ def api_tags():
 def api_tags_cleanup():
     """Run tag maintenance: remove orphans and merge similar tags."""
     from agents.tag_manager import cleanup_tags
+
     report = cleanup_tags()
     return {"report": report}
 
 
 if __name__ == "__main__":
     from db.schema import migrate_schema
+
     migrate_schema()
     app.run(debug=True, port=5001)

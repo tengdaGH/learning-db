@@ -2,7 +2,7 @@
 """
 Personal Learning System — Entry Point
 """
-import sys
+
 import argparse
 import logging
 
@@ -15,15 +15,20 @@ logger = logging.getLogger(__name__)
 
 def main():
     setup_logging()
-    
+
     # Always migrate first to handle schema changes
     migrate_schema()
     logger.info("Database schema migrated")
 
     parser = argparse.ArgumentParser(description="Personal Learning System")
     parser.add_argument("--init-db", action="store_true", help="Initialize the database schema")
-    parser.add_argument("command", nargs="?", choices=["chat", "review"], default="chat",
-                        help="Command to run (default: chat)")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=["chat", "review"],
+        default="chat",
+        help="Command to run (default: chat)",
+    )
     args = parser.parse_args()
 
     if args.init_db:
@@ -36,6 +41,7 @@ def main():
         chat_loop()
     elif args.command == "review":
         from agents.review_agent import run_review
+
         run_review()
 
 

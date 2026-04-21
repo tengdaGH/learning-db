@@ -1,6 +1,7 @@
 """
 Decides whether a user question/answer pair should be auto-logged to the DB.
 """
+
 import re
 
 # Questions that are NOT factual — skip logging
@@ -68,13 +69,26 @@ def estimate_confidence(answer: str) -> int:
     answer = answer.strip()
 
     low_confidence_signals = [
-        "i'm not sure", "i think", "probably", "might be",
-        "may be", "could be", "not certain", "don't know",
-        "verify", "check", "i believe", "as far as i know",
+        "i'm not sure",
+        "i think",
+        "probably",
+        "might be",
+        "may be",
+        "could be",
+        "not certain",
+        "don't know",
+        "verify",
+        "check",
+        "i believe",
+        "as far as i know",
     ]
     high_confidence_signals = [
-        "for example", "specifically", "according to",
-        "research shows", "is defined as", "the process",
+        "for example",
+        "specifically",
+        "according to",
+        "research shows",
+        "is defined as",
+        "the process",
     ]
 
     score = 3  # baseline

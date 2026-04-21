@@ -2,10 +2,13 @@
 Extracts topics and tags from a Q&A pair.
 Uses LLM to dynamically determine topics and cluster around existing ones.
 """
+
 from services.llm_client import call_llm, extract_text_from_response
 
 
-def extract_primary_topic(question: str, answer: str = "", existing_topics: list = None) -> tuple[str, bool]:
+def extract_primary_topic(
+    question: str, answer: str = "", existing_topics: list = None
+) -> tuple[str, bool]:
     """
     Determine the best topic for a question using the LLM.
 
@@ -19,7 +22,7 @@ def extract_primary_topic(question: str, answer: str = "", existing_topics: list
     # Build context of existing topics to encourage clustering
     topics_context = ""
     if existing_topics:
-        topic_names = [t['topic_name'] for t in existing_topics[:20]]
+        topic_names = [t["topic_name"] for t in existing_topics[:20]]
         topics_context = "Existing topics: " + ", ".join(topic_names)
 
     system = f"""You are a topic classifier for a personal learning database.
@@ -55,9 +58,25 @@ Q: "best way to cook rice" → EXISTING: Cooking or NEW: Cooking"""
         words = question.split()
         for word in reversed(words):
             if len(word) > 4 and word.lower() not in {
-                "what", "which", "about", "from", "with", "this", "that",
-                "have", "been", "were", "they", "their", "would", "could",
-                "should", "would", "could", "according", "braun's",
+                "what",
+                "which",
+                "about",
+                "from",
+                "with",
+                "this",
+                "that",
+                "have",
+                "been",
+                "were",
+                "they",
+                "their",
+                "would",
+                "could",
+                "should",
+                "would",
+                "could",
+                "according",
+                "braun's",
             }:
                 return word.capitalize(), True
         return "General", True
@@ -75,12 +94,43 @@ def extract_tags(question: str, answer: str = "") -> str:
     combined = question + " " + answer
     caps = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", combined)
     for cap in caps:
-        if len(cap) > 3 and cap.lower() not in {"what", "which", "where", "when", "how", "this", "that", "aristotle", "braun"}:
+        if len(cap) > 3 and cap.lower() not in {
+            "what",
+            "which",
+            "where",
+            "when",
+            "how",
+            "this",
+            "that",
+            "aristotle",
+            "braun",
+        }:
             tags.add(cap.lower().replace(" ", "-"))
 
     # Extract significant words
-    words = re.findall(r'\b[a-z]{4,}\b', text)
-    stopwords = {'what', 'which', 'about', 'from', 'with', 'this', 'that', 'have', 'been', 'were', 'they', 'their', 'would', 'could', 'should', 'when', 'where', 'there', 'here', 'about'}
+    words = re.findall(r"\b[a-z]{4,}\b", text)
+    stopwords = {
+        "what",
+        "which",
+        "about",
+        "from",
+        "with",
+        "this",
+        "that",
+        "have",
+        "been",
+        "were",
+        "they",
+        "their",
+        "would",
+        "could",
+        "should",
+        "when",
+        "where",
+        "there",
+        "here",
+        "about",
+    }
     for word in words:
         if word not in stopwords:
             tags.add(word)
@@ -91,5 +141,6 @@ def extract_tags(question: str, answer: str = "") -> str:
 def extract_sources(answer: str) -> str:
     """Find URLs or citations in the answer."""
     import re
+
     urls = re.findall(r"https?://[^\s\),\"]+", answer)
     return ",".join(urls) if urls else ""

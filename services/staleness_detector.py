@@ -1,7 +1,8 @@
 """
 Detects stale/outdated content based on topic type and age.
 """
-from datetime import datetime, timedelta
+
+from datetime import datetime
 
 # Months after which a topic is considered potentially stale
 EVOLVING_THRESHOLDS = {

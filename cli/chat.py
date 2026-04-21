@@ -1,12 +1,10 @@
 """
 CLI Chat interface for the learning system.
 """
-import sys
-import anthropic
+
 from agents.research_agent import ResearchAgent
 from agents.learning_assistant import suggest_related, find_gaps, suggest_next_steps
 from db.queries import get_latest_review_summary, get_user_topics
-
 
 COMMANDS = {
     "/help": "Show this help message",

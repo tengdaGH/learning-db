@@ -35,7 +35,7 @@ def migrate_schema():
             CREATE INDEX IF NOT EXISTS idx_qa_created_at
             ON qa_entries(created_at)
         """)
-    
+
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tags'")
     if cur.fetchone():
         cur.execute("""
@@ -146,4 +146,5 @@ def init_schema():
     conn.commit()
     conn.close()
     import logging
+
     logging.getLogger(__name__).info("Schema initialized.")

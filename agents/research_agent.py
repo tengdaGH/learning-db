@@ -3,8 +3,8 @@ Research Agent — answers questions, auto-logs to DB.
 Uses web search (Tavily) for time-sensitive / evolving topics.
 Uses MiniMax via OpenAI-compatible API for answers.
 """
+
 import re
-import time
 from db.queries import (
     add_qa_entry,
     update_user_knowledge,
@@ -20,24 +20,51 @@ from db.queries import get_all_qa_entries
 
 # Topics that are time-sensitive and warrant web search
 WEB_SEARCH_TRIGGERS = [
-    "gpt", "claude", "llm", "large language model", "chatgpt",
-    "openai", "anthropic", "ai model", "language model",
-    "machine learning model", "deep learning",
-    "new release", "latest version", "latest model",
-    "cursor", "copilot", "github copilot",
-    "react", "nextjs", "vue", "angular", "svelte",
-    "python 3", "typescript", "rust", "golang",
-    "aws", "azure", "gcp", "google cloud",
-    "docker", "kubernetes",
-    "ios", "android", "swift", "kotlin",
-    "web development", "frontend",
+    "gpt",
+    "claude",
+    "llm",
+    "large language model",
+    "chatgpt",
+    "openai",
+    "anthropic",
+    "ai model",
+    "language model",
+    "machine learning model",
+    "deep learning",
+    "new release",
+    "latest version",
+    "latest model",
+    "cursor",
+    "copilot",
+    "github copilot",
+    "react",
+    "nextjs",
+    "vue",
+    "angular",
+    "svelte",
+    "python 3",
+    "typescript",
+    "rust",
+    "golang",
+    "aws",
+    "azure",
+    "gcp",
+    "google cloud",
+    "docker",
+    "kubernetes",
+    "ios",
+    "android",
+    "swift",
+    "kotlin",
+    "web development",
+    "frontend",
 ]
 
 VERSION_PATTERN = re.compile(
     r"(gpt-\d|claude-?\d|react-?\d+|vue-?\d+|angular-?\d+|"
     r"python\s+v?3\.\d+|node\.js?\s*v?\d|typescript\s+v?\d|"
     r"version\s+\d|\d+\.\d+\.\d+)",
-    re.IGNORECASE
+    re.IGNORECASE,
 )
 
 
@@ -114,7 +141,9 @@ class ResearchAgent:
         search_note = ""
         if web_results:
             extra_context = self._build_web_context(web_results)
-            search_note = "\n\n[Note: I searched the web for the most up-to-date information on this topic.]"
+            search_note = (
+                "\n\n[Note: I searched the web for the most up-to-date information on this topic.]"
+            )
 
         system = f"""You are a patient, knowledgeable tutor for a curious teacher with no coding experience.
 
@@ -156,7 +185,12 @@ CONVERSATION STYLE:
         lines = ["They have explored these topics:"]
         for t in self.user_topics[:10]:
             lvl = t.get("proficiency_level", 1)
-            lvl_words = {1: "just heard of it", 2: "understands basics", 3: "can apply it", 4: "can teach it"}
+            lvl_words = {
+                1: "just heard of it",
+                2: "understands basics",
+                3: "can apply it",
+                4: "can teach it",
+            }
             lines.append(f"  - {t['topic_name']}: {lvl_words.get(lvl, 'unknown')}")
         return "\n".join(lines)
 
@@ -181,6 +215,7 @@ CONVERSATION STYLE:
             stale, reason = get_staleness(entry)
             if stale:
                 from db.queries import add_outdated_flag, mark_entry_outdated
+
                 add_outdated_flag(entry["id"], reason)
                 mark_entry_outdated(entry["id"], reason)
                 flagged.append(entry)

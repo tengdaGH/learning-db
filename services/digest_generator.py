@@ -1,11 +1,11 @@
 """
 Generates weekly learning digest from the database.
 """
+
 from datetime import datetime, timedelta
 from db.queries import (
     get_recent_qa_entries,
     get_pending_outdated_flags,
-    get_all_topics,
     get_user_knowledge,
     save_review_summary,
 )
@@ -18,15 +18,14 @@ def generate_weekly_digest() -> str:
 
     # Gather stats
     recent = get_recent_qa_entries(limit=50)
-    topics = get_all_topics()
     knowledge = get_user_knowledge()
     pending_flags = get_pending_outdated_flags()
 
     # Filter to this week's entries
     this_week = [
-        e for e in recent
-        if e.get("created_at") and
-        datetime.fromisoformat(e["created_at"]) >= week_start
+        e
+        for e in recent
+        if e.get("created_at") and datetime.fromisoformat(e["created_at"]) >= week_start
     ]
 
     lines = [
