@@ -524,6 +524,17 @@
       abortController = new AbortController();
       let sessionTitleSet = false;
 
+      // Mark session as researching (for deep mode)
+      if (mode.id === 'deep') {
+        loadSessions();
+        const session = sessions.find(s => s.id === currentSessionId);
+        if (session) {
+          session.isResearching = true;
+          saveSessions();
+          renderHistory();
+        }
+      }
+
       try {
         let endpoint = '/chat';
         if (mode.id === 'single') endpoint = '/chat/web';
@@ -671,6 +682,16 @@
       isStreaming = false;
       abortController = null;
       sendBtn.disabled = !messageInput.value.trim();
+
+      // Clear researching flag from session
+      loadSessions();
+      const session = sessions.find(s => s.id === currentSessionId);
+      if (session && session.isResearching) {
+        delete session.isResearching;
+        saveSessions();
+        renderHistory();
+      }
+
       scrollToBottom();
     }
 
@@ -1140,14 +1161,16 @@
           const roundsLabel = formatRounds(rounds);
           const timeAgo = formatTimeAgo(session.created_at);
 
+          const researchingIndicator = session.isResearching ? '<span class="researching-indicator" title="Research in progress..."></span>' : '';
+
           if (totalShown < DEFAULT_SHOW || isExpanded) {
             html += `<div class="history-item ${isActive ? 'active' : ''}" data-session-id="${session.id}">
-              <div class="history-title">${escapeHtml(session.title || 'New Chat')}</div>
+              <div class="history-title">${researchingIndicator}${escapeHtml(session.title || 'New Chat')}</div>
               <div class="history-meta">${timeAgo} · ${roundsLabel}</div>
             </div>`;
           } else {
             html += `<div class="history-item history-item-hidden ${isActive ? 'active' : ''}" data-session-id="${session.id}" style="display: none;">
-              <div class="history-title">${escapeHtml(session.title || 'New Chat')}</div>
+              <div class="history-title">${researchingIndicator}${escapeHtml(session.title || 'New Chat')}</div>
               <div class="history-meta">${timeAgo} · ${roundsLabel}</div>
             </div>`;
           }

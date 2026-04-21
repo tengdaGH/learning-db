@@ -1259,6 +1259,29 @@ html, body {
   background: var(--text-muted);
 }
 
+/* ─── Researching Indicator in History ─────────────────────────────────────── */
+.researching-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 6px;
+  animation: researchingPulse 1.5s infinite ease-in-out;
+  vertical-align: middle;
+}
+
+@keyframes researchingPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
 /* ─── Source Links ─────────────────────────────────────────────────────────── */
 .message-sources {
   margin-top: 12px;
