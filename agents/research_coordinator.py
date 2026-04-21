@@ -45,15 +45,19 @@ def _get_tavily_client():
 
 
 def _call_llm(prompt: str, system: str = "", max_tokens: int = 1024) -> str:
-    """Call MiniMax via Anthropic-compatible SDK (routes to MiniMax internally)."""
+    """Call MiniMax via Anthropic-compatible SDK."""
     import anthropic
+    import config
 
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(
+        auth_token=config.MINIMAX_API_KEY,
+        base_url=config.MINIMAX_BASE_URL,
+    )
 
     for attempt in range(3):
         try:
             response = client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model=config.MINIMAX_MODEL,
                 system=system,
                 max_tokens=max_tokens,
                 messages=[{"role": "user", "content": prompt}],

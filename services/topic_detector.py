@@ -9,10 +9,11 @@ import time
 def _call_llm(prompt: str, system: str = "", max_tokens: int = 100) -> str:
     """Call MiniMax via Anthropic-compatible SDK."""
     import anthropic
+    import config
 
     client = anthropic.Anthropic(
-        auth_token=os.getenv("MINIMAX_API_KEY"),
-        base_url=os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.com/anthropic"),
+        auth_token=config.MINIMAX_API_KEY,
+        base_url=config.MINIMAX_BASE_URL,
     )
 
     messages = []
@@ -23,7 +24,7 @@ def _call_llm(prompt: str, system: str = "", max_tokens: int = 100) -> str:
     for attempt in range(3):
         try:
             response = client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model=config.MINIMAX_MODEL,
                 max_tokens=max_tokens,
                 messages=messages,
                 stream=False,
