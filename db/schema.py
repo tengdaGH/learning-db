@@ -11,7 +11,7 @@ def get_connection():
 
 
 def migrate_schema():
-    """Add missing columns to existing tables (safe migrations)."""
+    """Add missing columns and tables (safe migrations)."""
     conn = get_connection()
     cur = conn.cursor()
 
@@ -20,6 +20,20 @@ def migrate_schema():
     existing = {col[1] for col in cur.fetchall()}
     if "is_evolving" not in existing:
         cur.execute("ALTER TABLE topics ADD COLUMN is_evolving INTEGER DEFAULT 1")
+
+    # Add indexes for performance
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_qa_topic_id_created
+        ON qa_entries(topic_id, created_at)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_qa_created_at
+        ON qa_entries(created_at)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_tags_name
+        ON tags(name)
+    """)
 
     conn.commit()
     conn.close()
@@ -30,7 +44,7 @@ def init_schema():
     conn = get_connection()
     cur = conn.cursor()
 
-    # Existing tables (from learning_db.py)
+    # Topics
     cur.execute("""
         CREATE TABLE IF NOT EXISTS topics (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,53 +55,15 @@ def init_schema():
         )
     """)
 
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            tags TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS flashcards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE,
-            front TEXT NOT NULL,
-            back TEXT NOT NULL,
-            difficulty INTEGER DEFAULT 2,
-            last_reviewed TIMESTAMP,
-            next_review TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS study_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE,
-            cards_reviewed INTEGER DEFAULT 0,
-            cards_correct INTEGER DEFAULT 0,
-            duration_minutes INTEGER,
-            studied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    # New: Q&A entries
+    # Q&A entries (normalized: no topic_name, uses topic_id FK)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS qa_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             question TEXT NOT NULL,
             answer TEXT NOT NULL,
             topic_id INTEGER REFERENCES topics(id) ON DELETE SET NULL,
-            topic_name TEXT,
             tags TEXT,
             confidence_level INTEGER DEFAULT 3,
-            sources TEXT,
             is_outdated INTEGER DEFAULT 0,
             outdated_reason TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -96,19 +72,27 @@ def init_schema():
         )
     """)
 
-    # New: User knowledge tracking
+    # Q&A entry sources (junction table, replaces comma-separated sources string)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS qa_entry_sources (
+            qa_entry_id INTEGER REFERENCES qa_entries(id) ON DELETE CASCADE,
+            source_url TEXT NOT NULL,
+            PRIMARY KEY (qa_entry_id, source_url)
+        )
+    """)
+
+    # User knowledge tracking (normalized: no topic_name, uses topic_id FK)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_knowledge (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE,
-            topic_name TEXT NOT NULL UNIQUE,
             proficiency_level INTEGER DEFAULT 1,
             last_mentioned TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             mention_count INTEGER DEFAULT 1
         )
     """)
 
-    # New: Outdated content flags
+    # Outdated content flags
     cur.execute("""
         CREATE TABLE IF NOT EXISTS outdated_flags (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,7 +104,7 @@ def init_schema():
         )
     """)
 
-    # New: Review summaries
+    # Review summaries
     cur.execute("""
         CREATE TABLE IF NOT EXISTS review_summaries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,7 +117,7 @@ def init_schema():
         )
     """)
 
-    # New: Tags
+    # Tags
     cur.execute("""
         CREATE TABLE IF NOT EXISTS tags (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,7 +126,7 @@ def init_schema():
         )
     """)
 
-    # New: Q&A Entry Tags (many-to-many)
+    # Q&A Entry Tags (many-to-many)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS qa_entry_tags (
             qa_entry_id INTEGER REFERENCES qa_entries(id) ON DELETE CASCADE,

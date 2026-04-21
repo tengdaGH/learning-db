@@ -78,14 +78,13 @@ class ResearchAgent:
         add_qa_entry(
             question=question,
             answer=answer,
-            topic_name=topic_name,
             topic_id=topic_id,
             tags=tags,
             confidence_level=confidence,
-            sources=sources,
+            sources=sources.split(",") if sources else [],
         )
 
-        update_user_knowledge(topic_name, proficiency=min(confidence, 4))
+        update_user_knowledge(topic_id, proficiency=min(confidence, 4))
         self.user_topics = get_user_topics()
 
         return answer, True

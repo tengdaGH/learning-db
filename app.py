@@ -222,13 +222,12 @@ CONVERSATION STYLE:
                 confidence = estimate_confidence(full_response)
                 topic_name, _ = extract_primary_topic(message, full_response, user_topics)
                 tags = extract_tags(message, full_response)
-                sources = ",".join([r.get("url", "") for r in web_results]) if web_results else ""
+                sources = [r.get("url", "") for r in web_results] if web_results else []
                 topic_id = get_or_create_topic(topic_name)
 
                 entry_id = add_qa_entry(
                     question=message,
                     answer=full_response,
-                    topic_name=topic_name,
                     topic_id=topic_id,
                     tags=tags,
                     confidence_level=confidence,
@@ -236,7 +235,7 @@ CONVERSATION STYLE:
                 )
                 # Auto-tag the entry
                 tag_entry(entry_id, message, full_response)
-                update_user_knowledge(topic_name, proficiency=min(confidence, 4))
+                update_user_knowledge(topic_id, proficiency=min(confidence, 4))
                 was_logged = True
             except Exception as e:
                 print(f"Error logging to DB: {e}")
@@ -400,15 +399,14 @@ CONVERSATION STYLE:
                 entry_id = add_qa_entry(
                     question=message,
                     answer=full_response,
-                    topic_name=topic_name,
                     topic_id=topic_id,
                     tags=tags,
                     confidence_level=confidence,
-                    sources=",".join(sources),
+                    sources=sources,
                 )
                 # Auto-tag the entry
                 tag_entry(entry_id, message, full_response)
-                update_user_knowledge(topic_name, proficiency=min(confidence, 4))
+                update_user_knowledge(topic_id, proficiency=min(confidence, 4))
                 was_logged = True
             except Exception as e:
                 print(f"Error logging to DB: {e}")

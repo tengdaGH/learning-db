@@ -58,13 +58,12 @@ class ResearchCoordinator:
             add_qa_entry(
                 question=question,
                 answer=synthesis,
-                topic_name=topic_name,
                 topic_id=topic_id,
                 tags=tags,
                 confidence_level=confidence,
-                sources=",".join(sources),
+                sources=sources,
             )
-            update_user_knowledge(topic_name, proficiency=min(confidence, 4))
+            update_user_knowledge(topic_id, proficiency=min(confidence, 4))
             self.user_topics = get_user_topics()
             was_logged = True
 
@@ -106,13 +105,12 @@ class ResearchCoordinator:
                 add_qa_entry(
                     question=question,
                     answer=synthesis,
-                    topic_name=topic_name,
                     topic_id=topic_id,
                     tags=tags,
                     confidence_level=confidence,
-                    sources=",".join(sources),
+                    sources=sources,
                 )
-                update_user_knowledge(topic_name, proficiency=min(confidence, 4))
+                update_user_knowledge(topic_id, proficiency=min(confidence, 4))
                 self.user_topics = get_user_topics()
                 was_logged = True
             except Exception as e:
