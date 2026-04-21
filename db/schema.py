@@ -15,25 +15,33 @@ def migrate_schema():
     conn = get_connection()
     cur = conn.cursor()
 
-    # topics.is_evolving
-    cur.execute("PRAGMA table_info(topics)")
-    existing = {col[1] for col in cur.fetchall()}
-    if "is_evolving" not in existing:
-        cur.execute("ALTER TABLE topics ADD COLUMN is_evolving INTEGER DEFAULT 1")
+    # Check if topics table exists
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics'")
+    if cur.fetchone():
+        # topics.is_evolving
+        cur.execute("PRAGMA table_info(topics)")
+        existing = {col[1] for col in cur.fetchall()}
+        if "is_evolving" not in existing:
+            cur.execute("ALTER TABLE topics ADD COLUMN is_evolving INTEGER DEFAULT 1")
 
-    # Add indexes for performance
-    cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_qa_topic_id_created
-        ON qa_entries(topic_id, created_at)
-    """)
-    cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_qa_created_at
-        ON qa_entries(created_at)
-    """)
-    cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_tags_name
-        ON tags(name)
-    """)
+    # Add indexes for performance (only if tables exist)
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='qa_entries'")
+    if cur.fetchone():
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_qa_topic_id_created
+            ON qa_entries(topic_id, created_at)
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_qa_created_at
+            ON qa_entries(created_at)
+        """)
+    
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tags'")
+    if cur.fetchone():
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_tags_name
+            ON tags(name)
+        """)
 
     conn.commit()
     conn.close()
