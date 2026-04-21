@@ -6,9 +6,4 @@ Press CTRL+C to quit
  * Restarting with watchdog (fsevents)
  * Debugger is active!
  * Debugger PIN: 689-022-986
-127.0.0.1 - - [22/Apr/2026 05:44:38] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [22/Apr/2026 05:44:42] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [22/Apr/2026 05:44:42] "GET /static/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [22/Apr/2026 05:44:42] "GET /api/topics HTTP/1.1" 200 -
-127.0.0.1 - - [22/Apr/2026 05:44:42] "GET /api/stats/today HTTP/1.1" 200 -
-127.0.0.1 - - [22/Apr/2026 05:44:42] "GET /api/tags HTTP/1.1" 200 -
+127.0.0.1 - - [22/Apr/2026 05:59:10] "GET / HTTP/1.1" 200 -

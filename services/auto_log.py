@@ -29,6 +29,7 @@ LOG_PATTERNS = [
     r"^(list|give me)",
     r"^(can (i|you)|is it possible|do (i|you) need)",
     r"^(which|what kind|what type)",
+    r"^(how many|how much|how long|how far|how old)",
 ]
 
 SKIP_PATTERNS = [re.compile(p, re.IGNORECASE) for p in SKIP_PATTERNS]

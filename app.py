@@ -71,8 +71,9 @@ def link_citations_in_markdown(text: str, sources: list) -> str:
         else:
             # Outside Sources section, replace [N] with [N](url) if we have that citation
             # Be careful not to replace [N] inside URLs or already-linked markdown
-            # Replace [N] followed by whitespace or end of line (not part of a URL)
-            replaced = re.sub(r'\[(\d+)\](?=\s|$|(?=[^[]*\]))', replace_citation, line)
+            # Replace [N] with [N](url) if not already a markdown link
+            # Use negative lookahead to avoid re-linking [N](url)
+            replaced = re.sub(r'\[(\d+)\](?!\()', replace_citation, line)
             result_lines.append(replaced)
 
     return '\n'.join(result_lines)
@@ -243,7 +244,7 @@ CONVERSATION STYLE:
             except Exception as e:
                 logger.error(f"Error logging to DB: {e}")
 
-        yield f"event: done\ndata: {json.dumps({'was_logged': was_logged})}\n\n"
+        yield f"event: done\ndata: {json.dumps({'was_logged': was_logged, 'sources': sources})}\n\n"
 
     return Response(
         stream_with_context(generate()),
@@ -416,7 +417,7 @@ CONVERSATION STYLE:
 
         tool_data = json.dumps({'tool': {'type': 'complete', 'message': 'Answer complete'}})
         yield f"event: tool\ndata: {tool_data}\n\n"
-        yield f"event: done\ndata: {json.dumps({'was_logged': was_logged, 'sources_count': len(sources)})}\n\n"
+        yield f"event: done\ndata: {json.dumps({'was_logged': was_logged, 'sources': sources})}\n\n"
 
     return Response(
         stream_with_context(generate()),

@@ -40,7 +40,16 @@
 
       <!-- History Section -->
       <div class="sidebar-section sidebar-section-fill" style="display: flex; flex-direction: column;">
-        <div class="sidebar-section-title">History</div>
+        <div class="sidebar-section-title" id="historySectionTitle">
+          <span>History</span>
+          <button class="clear-filter-btn" id="clearFilterBtn" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            Clear
+          </button>
+        </div>
         <div class="history-list" id="historyList">
           <!-- Sessions grouped by date -->
         </div>
@@ -190,6 +199,8 @@
     let sessions = [];
     let abortController = null;
     let lastEscapeTime = 0;
+
+    let activeTopicFilter = null; // When set, history shows only sessions related to this topic
 
     // Search modes: 0 = LLM only, 1 = Single Agent (Tavily), 2 = Deep Research
     const SEARCH_MODES = [
@@ -354,6 +365,14 @@
       messageInput.style.height = 'auto';
       sendBtn.disabled = !messageInput.value.trim();
       messageInput.focus();
+      // Clear topic filter when starting new chat
+      clearTopicFilter();
+      renderHistory();
+    });
+
+    // Clear topic filter button
+    document.getElementById('clearFilterBtn').addEventListener('click', () => {
+      clearTopicFilter();
       renderHistory();
     });
 
@@ -525,14 +544,9 @@
         const decoder = new TextDecoder();
         let assistantMessage = '';
         let wasLogged = false;
-
-        // Replace typing indicator with actual message bubble
-        removeTypingIndicator(typingId);
-        const assistantDiv = createMessageElement('assistant', '');
-        messagesContainer.appendChild(assistantDiv);
-        const bubbleDiv = assistantDiv.querySelector('.message-bubble');
-
-        // Activities now go to tool log only, not inline in messages
+        let sources = [];
+        let assistantDiv = null;
+        let bubbleDiv = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -550,6 +564,13 @@
               try {
                 const data = JSON.parse(line.slice(6));
                 if (data.token) {
+                  // First token received - replace typing indicator with message bubble
+                  if (!assistantDiv) {
+                    removeTypingIndicator(typingId);
+                    assistantDiv = createMessageElement('assistant', '');
+                    messagesContainer.appendChild(assistantDiv);
+                    bubbleDiv = assistantDiv.querySelector('.message-bubble');
+                  }
                   assistantMessage += data.token;
                   bubbleDiv.innerHTML = marked.parse(assistantMessage);
                   scrollToBottom();
@@ -590,6 +611,9 @@
                 if (data.was_logged !== undefined) {
                   wasLogged = data.was_logged;
                 }
+                if (data.sources) {
+                  sources = data.sources;
+                }
               } catch (e) {
                 // Skip invalid JSON
               }
@@ -597,10 +621,21 @@
           }
         }
 
-        // Remove typing indicator
-        removeTypingIndicator(typingId);
-
-
+        // Add source links if available (only if message was created)
+        if (assistantDiv && sources && sources.length > 0) {
+          const sourcesDiv = document.createElement('div');
+          sourcesDiv.className = 'message-sources';
+          sourcesDiv.innerHTML = `
+            <div class="sources-title">Sources</div>
+            <div class="sources-list">
+              ${sources.map((url, i) => {
+                const domain = url ? new URL(url).hostname.replace('www.', '') : '';
+                return `<a href="${url}" target="_blank" rel="noopener" class="source-link">[${i + 1}] ${domain}</a>`;
+              }).join('')}
+            </div>
+          `;
+          assistantDiv.appendChild(sourcesDiv);
+        }
 
         // Save assistant message to session
         if (assistantMessage) {
@@ -818,12 +853,26 @@
     async function handleTopicClick(e) {
       const parentEl = e.currentTarget;
       const topicId = parentEl.dataset.topicId;
-      const entriesContainer = document.getElementById(`entries-${topicId}`);
+      const topicName = parentEl.dataset.topic;
 
-      // Toggle expansion
-      if (parentEl.classList.contains('expanded')) {
+      // Toggle expansion for entries (show/hide inline)
+      const entriesContainer = document.getElementById(`entries-${topicId}`);
+      const isExpanded = parentEl.classList.contains('expanded');
+
+      // Collapse all other topics first
+      document.querySelectorAll('.topic-parent.expanded').forEach(el => {
+        if (el !== parentEl) {
+          el.classList.remove('expanded');
+          const otherContainer = document.getElementById(`entries-${el.dataset.topicId}`);
+          if (otherContainer) otherContainer.style.display = 'none';
+        }
+      });
+
+      if (isExpanded) {
         parentEl.classList.remove('expanded');
         entriesContainer.style.display = 'none';
+        clearTopicFilter();
+        renderHistory();
         return;
       }
 
@@ -842,6 +891,35 @@
       }
 
       entriesContainer.style.display = 'block';
+
+      // Also filter history to show sessions related to this topic
+      setTopicFilter(topicName);
+      renderHistory();
+    }
+
+    function setTopicFilter(topicName) {
+      activeTopicFilter = topicName;
+      const titleEl = document.getElementById('historySectionTitle');
+      const clearBtn = document.getElementById('clearFilterBtn');
+      titleEl.innerHTML = `
+        <span>History — ${escapeHtml(topicName)}</span>
+      `;
+      clearBtn.style.display = 'inline-flex';
+    }
+
+    function clearTopicFilter() {
+      activeTopicFilter = null;
+      const titleEl = document.getElementById('historySectionTitle');
+      const clearBtn = document.getElementById('clearFilterBtn');
+      titleEl.innerHTML = '<span>History</span>';
+      clearBtn.style.display = 'none';
+
+      // Collapse all expanded topics
+      document.querySelectorAll('.topic-parent.expanded').forEach(el => {
+        el.classList.remove('expanded');
+        const container = document.getElementById(`entries-${el.dataset.topicId}`);
+        if (container) container.style.display = 'none';
+      });
     }
 
     function renderTopicEntries(topicId, entries) {
@@ -857,7 +935,7 @@
           ? entry.question.substring(0, 60) + '...'
           : entry.question;
         return `
-          <div class="entry-item" data-entry-id="${entry.id}" data-question="${escapeHtml(entry.question)}">
+          <div class="entry-item" data-entry-id="${entry.id}" data-question="${escapeHtml(entry.question)}" data-answer="${escapeHtml(entry.answer || '')}">
             <div class="entry-question">${escapeHtml(questionPreview)}</div>
             <div class="entry-date">${date}</div>
           </div>
@@ -873,8 +951,28 @@
     function handleEntryClick(e) {
       const entryEl = e.currentTarget;
       const question = entryEl.dataset.question;
-      messageInput.value = question;
-      messageInput.focus();
+      const answer = entryEl.dataset.answer;
+
+      // Create a new session with this Q&A pair and load it
+      const session = createNewSession();
+      session.messages = [
+        { role: 'user', content: question, timestamp: new Date().toISOString() },
+        { role: 'assistant', content: answer, timestamp: new Date().toISOString() }
+      ];
+      session.title = question.length > 55 ? question.substring(0, 55) + '...' : question;
+      saveSessions();
+
+      // Load the session
+      currentSessionId = session.id;
+      localStorage.setItem(CURRENT_SESSION_KEY, session.id);
+
+      // Clear and rebuild messages
+      messagesContainer.innerHTML = '';
+      session.messages.forEach(msg => {
+        addMessage(msg.role, msg.content);
+      });
+
+      renderHistory();
       scrollToBottom();
     }
 
@@ -963,9 +1061,26 @@
         return;
       }
 
+      // Filter sessions if topic filter is active
+      let displaySessions = sessions;
+      if (activeTopicFilter) {
+        const filterLower = activeTopicFilter.toLowerCase();
+        displaySessions = sessions.filter(session => {
+          // Check if any message mentions this topic
+          return session.messages.some(msg =>
+            msg.content.toLowerCase().includes(filterLower)
+          );
+        });
+
+        if (displaySessions.length === 0) {
+          historyList.innerHTML = `<div class="history-empty">No sessions found for "${escapeHtml(activeTopicFilter)}"</div>`;
+          return;
+        }
+      }
+
       // Group by date
       const grouped = {};
-      sessions.forEach(session => {
+      displaySessions.forEach(session => {
         const dateKey = session.created_at.split('T')[0];
         if (!grouped[dateKey]) {
           grouped[dateKey] = [];
@@ -1042,8 +1157,8 @@
       });
 
       // Add expand/collapse toggle if there are more than DEFAULT_SHOW
-      const totalSessions = sessions.length;
-      if (totalSessions > DEFAULT_SHOW) {
+      const totalSessions = displaySessions.length;
+      if (totalSessions > DEFAULT_SHOW && !activeTopicFilter) {
         html += `<div class="history-expand" id="historyExpand">
           <span class="history-expand-text">Show ${Math.min(totalSessions, EXPANDED_SHOW) - DEFAULT_SHOW} more</span>
         </div>`;
