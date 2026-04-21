@@ -97,7 +97,6 @@
             <label for="modelSelect">Model:</label>
             <select id="modelSelect" name="model">
               <option value="MiniMax-M2.7-highspeed">MiniMax M2.7</option>
-              <option value="claude-haiku-4-5-20251001">Claude Haiku</option>
             </select>
           </div>
           <div class="search-mode-selector" id="searchModeSelector" title="Press Shift+Tab to cycle modes">
@@ -533,16 +532,7 @@
         messagesContainer.appendChild(assistantDiv);
         const bubbleDiv = assistantDiv.querySelector('.message-bubble');
 
-        // For deep mode, show a default activity message
-        if (mode.id === 'deep') {
-          const activityDiv = assistantDiv.querySelector('.message-activity');
-          if (activityDiv) {
-            const entry = document.createElement('div');
-            entry.className = 'activity-entry activity-deep';
-            entry.textContent = 'Conducting deep research...';
-            activityDiv.appendChild(entry);
-          }
-        }
+        // Activities now go to tool log only, not inline in messages
 
         while (true) {
           const { done, value } = await reader.read();
@@ -588,15 +578,10 @@
                       data.tool.type === 'complete') {
                     // Skip these
                   } else {
-                    // Show activity inline in bubble
-                    const activityDiv = assistantDiv.querySelector('.message-activity');
-                    if (activityDiv) {
-                      const entry = document.createElement('div');
-                      entry.className = `activity-entry activity-${data.tool.type}`;
-                      entry.textContent = data.tool.message;
-                      activityDiv.appendChild(entry);
-                      scrollToBottom();
-                    }
+                    // Send to tool log
+                    addToolEntry(data.tool);
+                    // Show tool log panel
+                    document.getElementById('toolLog').classList.add('visible');
                   }
                 }
                 if (data.model) {
@@ -615,11 +600,7 @@
         // Remove typing indicator
         removeTypingIndicator(typingId);
 
-        // Remove empty activity container
-        const activityDiv = assistantDiv.querySelector('.message-activity');
-        if (activityDiv && activityDiv.children.length === 0) {
-          activityDiv.remove();
-        }
+
 
         // Save assistant message to session
         if (assistantMessage) {
@@ -690,10 +671,8 @@
       const bubbleContent = role === 'assistant'
         ? marked.parse(content)
         : escapeHtml(content);
-      const activityHtml = role === 'assistant' ? '<div class="message-activity"></div>' : '';
       div.innerHTML = `
         <div class="message-bubble">${bubbleContent}</div>
-        ${activityHtml}
         <div class="message-meta"></div>
       `;
       return div;
@@ -753,18 +732,27 @@
       div.id = id;
       div.className = 'message assistant';
       const mode = SEARCH_MODES[currentSearchMode];
-      let indicatorText = '';
-      if (mode.id === 'single') indicatorText = 'Searching the web...';
-      else if (mode.id === 'deep') indicatorText = 'Conducting deep research...';
-      const thinkingStepsHtml = mode.id === 'deep' ? '<div class="thinking-steps"></div>' : '';
+      
+      // Mode-specific status text and icon
+      const modeConfig = {
+        llm: { text: 'Thinking', icon: 'brain' },
+        single: { text: 'Searching', icon: 'search' },
+        deep: { text: 'Researching', icon: 'team' }
+      };
+      const config = modeConfig[mode.id] || modeConfig.llm;
+      
       div.innerHTML = `
-        <div class="typing-indicator">
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
+        <div class="typing-indicator mode-${mode.id}">
+          <div class="typing-breathing">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+          <div class="typing-status mode-${mode.id}">
+            <span class="typing-status-icon">${getModeIcon(config.icon)}</span>
+            <span>${config.text}</span>
+          </div>
         </div>
-        ${indicatorText ? `<div class="typing-text">${indicatorText}</div>` : ''}
-        ${thinkingStepsHtml}
       `;
       messagesContainer.appendChild(div);
       scrollToBottom();
