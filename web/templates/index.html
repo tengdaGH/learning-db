@@ -524,6 +524,9 @@
       abortController = new AbortController();
       let sessionTitleSet = false;
 
+      // Capture session ID so message is saved to correct session even if user switches
+      const streamSessionId = currentSessionId;
+
       // Mark session as researching (for deep mode)
       if (mode.id === 'deep') {
         loadSessions();
@@ -648,10 +651,19 @@
           assistantDiv.appendChild(sourcesDiv);
         }
 
-        // Save assistant message to session
+        // Save assistant message to the session that was active when streaming started
         if (assistantMessage) {
-          saveMessageToSession('assistant', assistantMessage);
-          renderHistory();
+          loadSessions();
+          const targetSession = sessions.find(s => s.id === streamSessionId);
+          if (targetSession) {
+            targetSession.messages.push({
+              role: 'assistant',
+              content: assistantMessage,
+              timestamp: new Date().toISOString()
+            });
+            saveSessions();
+            renderHistory();
+          }
         }
 
         // Add logged badge if applicable
@@ -683,11 +695,11 @@
       abortController = null;
       sendBtn.disabled = !messageInput.value.trim();
 
-      // Clear researching flag from session
+      // Clear researching flag from the stream session (not current, in case user switched)
       loadSessions();
-      const session = sessions.find(s => s.id === currentSessionId);
-      if (session && session.isResearching) {
-        delete session.isResearching;
+      const streamSession = sessions.find(s => s.id === streamSessionId);
+      if (streamSession && streamSession.isResearching) {
+        delete streamSession.isResearching;
         saveSessions();
         renderHistory();
       }
@@ -974,27 +986,39 @@
       const question = entryEl.dataset.question;
       const answer = entryEl.dataset.answer;
 
-      // Create a new session with this Q&A pair and load it
-      const session = createNewSession();
-      session.messages = [
-        { role: 'user', content: question, timestamp: new Date().toISOString() },
-        { role: 'assistant', content: answer, timestamp: new Date().toISOString() }
-      ];
-      session.title = question.length > 55 ? question.substring(0, 55) + '...' : question;
-      saveSessions();
+      loadSessions();
 
-      // Load the session
-      currentSessionId = session.id;
-      localStorage.setItem(CURRENT_SESSION_KEY, session.id);
+      // Try to find an existing session that contains this exact question
+      // This preserves conversation context instead of creating an isolated Q&A
+      const existingSession = sessions.find(s =>
+        s.messages.some(m => m.role === 'user' && m.content === question)
+      );
 
-      // Clear and rebuild messages
-      messagesContainer.innerHTML = '';
-      session.messages.forEach(msg => {
-        addMessage(msg.role, msg.content);
-      });
-
-      renderHistory();
-      scrollToBottom();
+      if (existingSession) {
+        // Load the original session with full context
+        loadSession(existingSession.id);
+      } else {
+        // Fallback: create a new session with just this Q&A pair
+        const session = createNewSession();
+        session.messages = [
+          {
+            role: 'user',
+            content: question,
+            timestamp: new Date().toISOString(),
+          },
+          {
+            role: 'assistant',
+            content: answer,
+            timestamp: new Date().toISOString(),
+          },
+        ];
+        session.title =
+          question.length > 55
+            ? question.substring(0, 55) + '...'
+            : question;
+        saveSessions();
+        loadSession(session.id);
+      }
     }
 
     // ─── Load Knowledge Stats ───────────────────────────────────────────────────
