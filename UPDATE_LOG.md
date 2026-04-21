@@ -75,7 +75,21 @@
   python run.py --init-db
   ```
 
+### Codebase Cleanup
+- **Formatted all 23 Python files** with black (line-length 100)
+- **Removed 20+ unused imports** (os, sys, time, anthropic, datetime, etc.)
+- **Removed 10+ unused variables** (model, topics, etc.)
+- **Fixed f-strings** with missing placeholders
+- **Resolved all pyflakes warnings** — zero warnings now
+- **Cleaned artifacts**: removed server.log, __pycache__, *.pyc files
+
+### Session Context Fixes
+- **Topic entries load full session** — Clicking a Q&A under a topic now finds and loads the original session with complete conversation history, instead of creating an isolated single Q&A pair
+- **Stream session isolation** — Captures `streamSessionId` when streaming starts, saves assistant responses to that specific session even if user switches to another session mid-stream
+- **Research flag isolation** — `isResearching` flag is now cleared from the correct session when research completes
+
 ## Current Status
 - ✅ All 4 phases complete
+- ✅ Codebase cleaned and linted (zero pyflakes warnings)
 - ✅ Server running at http://127.0.0.1:5001
-- ✅ 8 commits ahead of origin/master
+- ✅ 10 commits ahead of origin/master
