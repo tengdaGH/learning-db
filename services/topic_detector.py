@@ -2,42 +2,7 @@
 Extracts topics and tags from a Q&A pair.
 Uses LLM to dynamically determine topics and cluster around existing ones.
 """
-import os
-import time
-
-
-def _call_llm(prompt: str, system: str = "", max_tokens: int = 100) -> str:
-    """Call MiniMax via Anthropic-compatible SDK."""
-    import anthropic
-    import config
-
-    client = anthropic.Anthropic(
-        auth_token=config.MINIMAX_API_KEY,
-        base_url=config.MINIMAX_BASE_URL,
-    )
-
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
-
-    for attempt in range(3):
-        try:
-            response = client.messages.create(
-                model=config.MINIMAX_MODEL,
-                max_tokens=max_tokens,
-                messages=messages,
-                stream=False,
-            )
-            for block in response.content:
-                if block.type == "text" and getattr(block, "text", None):
-                    return block.text
-            return "[No response content]"
-        except Exception as e:
-            if attempt < 2:
-                time.sleep(2 ** attempt)
-                continue
-            return f"[Error: {e}]"
+from services.llm_client import call_llm, extract_text_from_response
 
 
 def extract_primary_topic(question: str, answer: str = "", existing_topics: list = None) -> tuple[str, bool]:
@@ -76,7 +41,8 @@ Q: "how do neural networks learn" → EXISTING: Machine Learning (if exists) or 
 Q: "what did aristotle say about virtue" → EXISTING: Philosophy or NEW: Philosophy
 Q: "best way to cook rice" → EXISTING: Cooking or NEW: Cooking"""
 
-    response = _call_llm(question, system=system, max_tokens=50)
+    response = call_llm(question, system=system, max_tokens=50)
+    response = extract_text_from_response(response)
 
     if response.startswith("EXISTING:"):
         topic = response.split("EXISTING:")[1].strip()

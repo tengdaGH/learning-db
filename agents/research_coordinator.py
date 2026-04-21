@@ -12,68 +12,8 @@ from db.queries import (
 )
 from services.auto_log import should_log, estimate_confidence
 from services.topic_detector import extract_primary_topic, extract_tags
-
-import os
-
-# Tavily API keys from environment
-def _get_tavily_keys():
-    """Get Tavily API keys from environment variables."""
-    keys = []
-    key1 = os.environ.get('TAVILY_API_KEY_1')
-    key2 = os.environ.get('TAVILY_API_KEY_2')
-    if key1:
-        keys.append(key1)
-    if key2:
-        keys.append(key2)
-    return keys if keys else None
-
-
-def _get_tavily_client():
-    """Try each key until one works."""
-    from tavily import TavilyClient
-    keys = _get_tavily_keys()
-    if not keys:
-        return None
-    for key in keys:
-        try:
-            client = TavilyClient(api_key=key)
-            client.search("test", max_results=1)
-            return client
-        except Exception:
-            continue
-    return None
-
-
-def _call_llm(prompt: str, system: str = "", max_tokens: int = 1024) -> str:
-    """Call MiniMax via Anthropic-compatible SDK."""
-    import anthropic
-    import config
-
-    client = anthropic.Anthropic(
-        auth_token=config.MINIMAX_API_KEY,
-        base_url=config.MINIMAX_BASE_URL,
-    )
-
-    for attempt in range(3):
-        try:
-            response = client.messages.create(
-                model=config.MINIMAX_MODEL,
-                system=system,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            for block in response.content:
-                if block.type == "text" and getattr(block, "text", None):
-                    return block.text
-            for block in response.content:
-                if block.type == "thinking" and getattr(block, "thinking", None):
-                    return block.thinking[:500]
-            return "[No response content]"
-        except Exception as e:
-            if attempt < 2:
-                time.sleep(2 ** attempt)
-                continue
-            return f"[Error: {e}]"
+from services.llm_client import call_llm, extract_text_from_response
+from services.tavily_client import get_tavily_client
 
 
 class ResearchCoordinator:
@@ -84,7 +24,7 @@ class ResearchCoordinator:
     @property
     def tavily(self):
         if self._tavily is None:
-            self._tavily = _get_tavily_client()
+            self._tavily = get_tavily_client()
         return self._tavily
 
     def deep_research(self, question: str) -> tuple[str, bool, List[str]]:
@@ -196,7 +136,8 @@ Output:
 4. How do React and Vue compare in ecosystem and community support?
 5. What are the pros and cons of each for different project types?"""
 
-        response = _call_llm(question, system=system, max_tokens=500)
+        response = call_llm(question, system=system, max_tokens=500)
+        response = extract_text_from_response(response)
 
         # Parse sub-questions from response
         lines = response.strip().split('\n')
@@ -237,11 +178,12 @@ SUB-QUESTION: {sub_question}
 
 Provide a thorough, factual answer that could be used as part of a comprehensive report. Be specific and include details."""
 
-        answer = _call_llm(sub_question, system=system, max_tokens=800)
+        answer = call_llm(sub_question, system=system, max_tokens=800)
+        answer_text = extract_text_from_response(answer)
 
         return {
             'question': sub_question,
-            'answer': answer,
+            'answer': answer_text,
             'web_results': web_results,
             'sources': [r.get('url', '') for r in web_results if r.get('url')]
         }
@@ -275,7 +217,8 @@ INSTRUCTIONS:
 7. Add [1], [2], etc. citations after key facts that come from specific sources
 8. End with a Sources section listing all referenced URLs with their numbers"""
 
-        synthesis = _call_llm(original_question, system=system, max_tokens=2000)
+        response = call_llm(original_question, system=system, max_tokens=2000)
+        synthesis = extract_text_from_response(response)
         return synthesis
 
     def _collect_all_sources(self, sub_results: List[Dict]) -> List[str]:

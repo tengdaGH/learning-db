@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
+import config
+
 from db.queries import (
     get_all_topics,
     get_all_topics_with_counts,
@@ -25,6 +27,8 @@ from db.queries import (
 from agents.tag_manager import tag_entry
 from services.auto_log import should_log, estimate_confidence
 from services.topic_detector import extract_primary_topic, extract_tags
+from services.llm_client import call_llm
+from services.tavily_client import get_tavily_client
 
 
 def link_citations_in_markdown(text: str, sources: list) -> str:
@@ -73,11 +77,6 @@ def link_citations_in_markdown(text: str, sources: list) -> str:
 
 app = Flask(__name__, static_folder="web/static", template_folder="web/templates")
 
-# ─── Model configurations ──────────────────────────────────────────────────────
-
-MINIMAX_MODEL = "MiniMax-M2.7-highspeed"
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
-
 # Topics that warrant web search
 WEB_SEARCH_TRIGGERS = [
     "gpt", "claude", "llm", "large language model", "chatgpt",
@@ -92,102 +91,6 @@ WEB_SEARCH_TRIGGERS = [
     "ios", "android", "swift", "kotlin",
     "web development", "frontend",
 ]
-
-TAVILY_KEYS = []
-
-
-def _get_tavily_keys_from_env():
-    """Get Tavily API keys from environment variables."""
-    global TAVILY_KEYS
-    if TAVILY_KEYS:
-        return TAVILY_KEYS
-    keys = []
-    key1 = os.environ.get('TAVILY_API_KEY_1')
-    key2 = os.environ.get('TAVILY_API_KEY_2')
-    if key1:
-        keys.append(key1)
-    if key2:
-        keys.append(key2)
-    TAVILY_KEYS = keys
-    return keys
-
-
-def _get_tavily_client():
-    """Try each key until one works."""
-    from tavily import TavilyClient
-    keys = _get_tavily_keys_from_env()
-    if not keys:
-        return None
-    for key in keys:
-        try:
-            client = TavilyClient(api_key=key)
-            client.search("test", max_results=1)
-            return client
-        except Exception:
-            continue
-    return None
-
-
-def _call_minimax(prompt: str, system: str = "", max_tokens: int = 1024):
-    """Call MiniMax via Anthropic-compatible API using ANTHROPIC_* env vars."""
-    import os
-    import anthropic
-
-    client = anthropic.Anthropic(
-        auth_token=os.getenv("MINIMAX_API_KEY"),
-        base_url=os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.io/v1"),
-    )
-
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
-
-    for attempt in range(3):
-        try:
-            response = client.messages.create(
-                model=MINIMAX_MODEL,
-                max_tokens=max_tokens,
-                messages=messages,
-                stream=True,
-            )
-            return response
-        except Exception as e:
-            if attempt < 2:
-                time.sleep(2 ** attempt)
-                continue
-            raise e
-
-
-def _call_claude(prompt: str, system: str = "", max_tokens: int = 1024):
-    """Call Claude Haiku via Anthropic SDK using ANTHROPIC_* env vars."""
-    import os
-    import anthropic
-
-    client = anthropic.Anthropic(
-        auth_token=os.getenv("MINIMAX_API_KEY"),
-        base_url=os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.io/v1"),
-    )
-
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
-
-    for attempt in range(3):
-        try:
-            response = client.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=max_tokens,
-                messages=messages,
-                stream=True,
-            )
-            return response
-        except Exception as e:
-            if attempt < 2:
-                time.sleep(2 ** attempt)
-                continue
-            raise e
 
 
 def _should_search_web(question: str) -> bool:
@@ -250,7 +153,7 @@ def chat():
     Form data: message, model (optional, defaults to MiniMax)
     """
     message = request.form.get("message", "").strip()
-    model = request.form.get("model", MINIMAX_MODEL)
+    model = request.form.get("model", config.MINIMAX_MODEL)
 
     if not message:
         return {"error": "No message provided"}, 400
@@ -275,7 +178,7 @@ CONVERSATION STYLE:
     tavily_client = None
     web_results = None
     if _should_search_web(message):
-        tavily_client = _get_tavily_client()
+        tavily_client = get_tavily_client()
         if tavily_client:
             web_results = _search_web(message, tavily_client)
             if web_results:
@@ -292,11 +195,8 @@ CONVERSATION STYLE:
 
 [Note: I searched the web for the most up-to-date information on this topic.]"""
 
-    # Determine which model to use
-    if model == CLAUDE_MODEL:
-        llm_stream = _call_claude(message, system=system, max_tokens=1024)
-    else:
-        llm_stream = _call_minimax(message, system=system, max_tokens=1024)
+    # Call LLM with streaming
+    llm_stream = call_llm(message, system=system, max_tokens=1024, stream=True)
 
     def generate():
         full_response = ""
@@ -360,7 +260,7 @@ def chat_deep():
     Receives message, streams SSE response.
     """
     message = request.form.get("message", "").strip()
-    model = request.form.get("model", MINIMAX_MODEL)
+    model = request.form.get("model", config.MINIMAX_MODEL)
 
     if not message:
         return {"error": "No message provided"}, 400
@@ -417,7 +317,7 @@ def chat_web():
     Single agent mode — uses Tavily web search for comprehensive answers.
     """
     message = request.form.get("message", "").strip()
-    model = request.form.get("model", MINIMAX_MODEL)
+    model = request.form.get("model", config.MINIMAX_MODEL)
 
     if not message:
         return {"error": "No message provided"}, 400
@@ -426,7 +326,7 @@ def chat_web():
     user_topics = get_user_topics()
 
     # Always do Tavily search for web mode
-    tavily_client = _get_tavily_client()
+    tavily_client = get_tavily_client()
     web_results = None
     extra_context = ""
 
@@ -470,10 +370,7 @@ CONVERSATION STYLE:
 
 [Note: I searched the web for the most up-to-date information on this topic.]"""
 
-        if model == CLAUDE_MODEL:
-            llm_stream = _call_claude(message, system=system, max_tokens=1024)
-        else:
-            llm_stream = _call_minimax(message, system=system, max_tokens=1024)
+        llm_stream = call_llm(message, system=system, max_tokens=1024, stream=True)
 
         for event in llm_stream:
             if hasattr(event, 'type') and event.type == 'content_block_delta':

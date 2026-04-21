@@ -275,12 +275,19 @@
       if (!text) return null;
       // Find first sentence ending with . ! or ?
       const match = text.match(/^[^.!?]*[.!?]/);
-      if (match && match[0].length > 10) {
-        return match[0].trim().substring(0, 60);
-      }
-      // Fallback: first 50 chars
-      if (text.length > 10) {
-        return text.trim().substring(0, 50) + (text.length > 50 ? '...' : '');
+      if (match && match[0].length > 15) {
+        let sentence = match[0].trim();
+        // Truncate at word boundary if too long (max 55 chars)
+        if (sentence.length > 55) {
+          const truncated = sentence.substring(0, 55);
+          const lastSpace = truncated.lastIndexOf(' ');
+          if (lastSpace > 20) {
+            sentence = truncated.substring(0, lastSpace) + '...';
+          } else {
+            sentence = truncated + '...';
+          }
+        }
+        return sentence;
       }
       return null;
     }

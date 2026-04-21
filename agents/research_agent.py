@@ -14,6 +14,8 @@ from db.queries import (
 from services.auto_log import should_log, estimate_confidence
 from services.topic_detector import extract_primary_topic, extract_tags
 from services.staleness_detector import get_staleness
+from services.llm_client import call_llm, extract_text_from_response
+from services.tavily_client import get_tavily_client
 from db.queries import get_all_qa_entries
 
 # Topics that are time-sensitive and warrant web search
@@ -38,69 +40,6 @@ VERSION_PATTERN = re.compile(
     re.IGNORECASE
 )
 
-# Tavily API keys from environment
-def _get_tavily_keys():
-    """Get Tavily API keys from environment variables."""
-    import os
-    keys = []
-    key1 = os.environ.get('TAVILY_API_KEY_1')
-    key2 = os.environ.get('TAVILY_API_KEY_2')
-    if key1:
-        keys.append(key1)
-    if key2:
-        keys.append(key2)
-    return keys if keys else None
-
-
-def _get_tavily_client():
-    """Try each key until one works."""
-    from tavily import TavilyClient
-    keys = _get_tavily_keys()
-    if not keys:
-        return None
-    for key in keys:
-        try:
-            client = TavilyClient(api_key=key)
-            client.search("test", max_results=1)
-            return client
-        except Exception:
-            continue
-    return None
-
-
-def _call_llm(prompt: str, system: str = "", max_tokens: int = 1024) -> str:
-    """Call MiniMax via Anthropic-compatible SDK."""
-    import anthropic
-    import config
-
-    client = anthropic.Anthropic(
-        auth_token=config.MINIMAX_API_KEY,
-        base_url=config.MINIMAX_BASE_URL,
-    )
-
-    for attempt in range(3):
-        try:
-            response = client.messages.create(
-                model=config.MINIMAX_MODEL,
-                system=system,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            # Extract text from response blocks
-            for block in response.content:
-                if block.type == "text" and getattr(block, "text", None):
-                    return block.text
-            # Fallback: return thinking content if no text block
-            for block in response.content:
-                if block.type == "thinking" and getattr(block, "thinking", None):
-                    return block.thinking[:500]
-            return "[No response content]"
-        except Exception as e:
-            if attempt < 2:
-                time.sleep(2 ** attempt)
-                continue
-            return f"[Error: {e}]"
-
 
 class ResearchAgent:
     def __init__(self):
@@ -110,7 +49,7 @@ class ResearchAgent:
     @property
     def tavily(self):
         if self._tavily is None:
-            self._tavily = _get_tavily_client()
+            self._tavily = get_tavily_client()
         return self._tavily
 
     def answer(self, question: str) -> tuple[str, bool]:
@@ -188,7 +127,8 @@ CONVERSATION STYLE:
 - Use everyday analogies when helpful
 - Be encouraging{extra_context}{search_note}"""
 
-        return _call_llm(question, system=system, max_tokens=1024)
+        response = call_llm(question, system=system, max_tokens=1024)
+        return extract_text_from_response(response)
 
     def _build_web_context(self, results: list) -> str:
         """Build a web search context string from Tavily results."""
