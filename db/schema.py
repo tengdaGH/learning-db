@@ -137,4 +137,5 @@ def init_schema():
 
     conn.commit()
     conn.close()
-    print("Schema initialized.")
+    import logging
+    logging.getLogger(__name__).info("Schema initialized.")

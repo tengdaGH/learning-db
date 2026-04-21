@@ -5,12 +5,15 @@ import os
 import re
 import time
 import json
+import logging
 from flask import Flask, render_template, request, Response, stream_with_context
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
 import config
+
+logger = logging.getLogger(__name__)
 
 from db.queries import (
     get_all_topics,
@@ -238,7 +241,7 @@ CONVERSATION STYLE:
                 update_user_knowledge(topic_id, proficiency=min(confidence, 4))
                 was_logged = True
             except Exception as e:
-                print(f"Error logging to DB: {e}")
+                logger.error(f"Error logging to DB: {e}")
 
         yield f"event: done\ndata: {json.dumps({'was_logged': was_logged})}\n\n"
 
@@ -409,7 +412,7 @@ CONVERSATION STYLE:
                 update_user_knowledge(topic_id, proficiency=min(confidence, 4))
                 was_logged = True
             except Exception as e:
-                print(f"Error logging to DB: {e}")
+                logger.error(f"Error logging to DB: {e}")
 
         tool_data = json.dumps({'tool': {'type': 'complete', 'message': 'Answer complete'}})
         yield f"event: tool\ndata: {tool_data}\n\n"

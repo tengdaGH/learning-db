@@ -114,7 +114,8 @@ class ResearchCoordinator:
                 self.user_topics = get_user_topics()
                 was_logged = True
             except Exception as e:
-                print(f"Error logging to DB: {e}")
+                import logging
+                logging.getLogger(__name__).error(f"Error logging to DB: {e}")
 
         yield ('tool', {'type': 'complete', 'message': 'Research complete'})
         yield ('done', {'was_logged': was_logged, 'sources': sources, 'answer': synthesis})
